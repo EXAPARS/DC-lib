@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# Case insensitive comparisons
+shopt -s nocasematch
+
+# Code version & cleaning
+if [ $# -eq 0 ]; then
+    echo "Please specify:"
+    echo " - Code version (Ref, DC, Hybrid, Coloring)"
+    echo " - And vector length (SSE, AVX, MIC)"
+    echo "Or clean"
+    exit
+fi
+
+# Options
+VERSION=0
+HYBRID=0
+OPTIMIZED=0
+DUMP=0
+OPENMP=0
+VEC=0
+STATS=0
+DEBUG=0
+VERBOSE=0
+MATT=0
+PCM=0
+PAPI=0
+VTUNE=0
+CILKVIEW=0
+
+for i in $@; do
+	if [[ $i == "clean" ]]; then
+	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
+              external_files.mod mod_qvddump.mod 2> /dev/null
+		echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
+		exit
+	elif [[ $i == "mrproper" ]]; then
+	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../bin/* \
+              external_files.mod mod_qvddump.mod 2> /dev/null
+		echo -e "\\033[1;32mBuild & bin directories have been cleaned up\\033[0;39m"
+		exit
+	elif [[ $i == "ref" ]]; then
+		VERSION="REF"
+	elif [[ $i == "dc" ]]; then
+		VERSION="DC"
+	elif [[ $i == "coloring" ]]; then
+		VERSION="COLORING"
+        OPENMP=1
+    elif [[ $i == "hybrid" ]]; then
+        VERSION="DC"
+        HYBRID=1
+	elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
+		OPTIMIZED=1
+	elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
+		OPENMP=1
+    elif [[ $i == "sse" ]]; then
+        VEC="sse"
+    elif [[ $i == "avx" ]]; then
+        VEC="avx"
+    elif [[ $i == "mic" ]]; then
+        VEC="mic"
+	elif [[ $i == "dump" ]]; then
+		DUMP=1
+	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
+		STATS=1
+	elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
+		DEBUG=1
+	elif [[ $i == "verbose" ]]; then
+		VERBOSE=1
+	elif [[ $i == "matt" ]]; then
+		MATT=1
+        DEBUG=1
+	elif [[ $i == "pcm" ]]; then
+		PCM=1
+	elif [[ $i == "papi" ]]; then
+		PAPI=1
+	elif [[ $i == "vtune" ]]; then
+		VTUNE=1
+        DEBUG=1
+	elif [[ $i == "cilkview" ]]; then
+		CILKVIEW=1
+	else
+		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
+	fi
+done
+
+if [[ $VERSION != "ref" ]] && [[ $VERSION != "dc" ]] &&
+   [[ $VERSION != "hybrid" ]] && [[ $VERSION != "coloring" ]]; then
+    echo -e "\\033[1;31mPlease specify code version: Ref, DC, Hybrid or Coloring\\033[0;39m"
+    exit
+fi
+if [[ $VEC == 0 ]]; then
+    echo -e "\\033[1;31mPlease specify vector length: SSE, AVX or MIC\\033[0;39m"
+    exit
+fi
+
+# Cross compile for MIC
+if [[ $VEC == "mic" ]]; then
+	export CC=icc
+	export CXX=icpc
+	export FC=ifort
+	export CFLAGS="-mmic"
+	export CXXFLAGS=$CFLAGS
+	export FFLAGS=$CFLAGS
+	export MPI_C=mpiicc
+	export MPI_CXX=mpiicpc
+
+    if [[ $DUMP == 1 ]]; then
+	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+	          -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
+	          -DMETIS_LIBRARIES="$HOME/Programs/METIS/lib/libmetis.a" \
+              -DCILKVIEW_INCLUDE_PATH="$HOME/Programs/CilkTools/include/cilktools/" \
+              -Dversion=$VERSION -Doptimized=$OPTIMIZED -Dhybrid=$HYBRID -Domp=$OPENMP \
+	          -Dvec=$VEC -Ddump=$DUMP -Dstats=$STATS -Ddebug=$DEBUG -Dmatt=$MATT \
+              -Dverbose=$VERBOSE -Dpcm=$PCM -Dpapi=$PAPI -Dvtune=$VTUNE \
+              -Dcilkview=$CILKVIEW \
+              . -G "Unix Makefiles"
+    else
+	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+              -DCILKVIEW_INCLUDE_PATH="$HOME/Programs/CilkTools/include/cilktools/" \
+              -Dversion=$VERSION -Doptimized=$OPTIMIZED -Dhybrid=$HYBRID -Domp=$OPENMP \
+	          -Dvec=$VEC -Ddump=$DUMP -Dstats=$STATS -Ddebug=$DEBUG -Dmatt=$MATT \
+              -Dverbose=$VERBOSE -Dpcm=$PCM -Dpapi=$PAPI -Dvtune=$VTUNE \
+              -Dcilkview=$CILKVIEW \
+              . -G "Unix Makefiles"
+    fi
+else
+    if [[ $DUMP == 1 ]]; then
+        cmake -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
+	          -DMETIS_LIBRARIES="$HOME/Programs/METIS/lib/libmetis.a" \
+              -DCILKVIEW_INCLUDE_PATH="$HOME/Programs/CilkTools/include/cilktools/" \
+              -Dversion=$VERSION -Doptimized=$OPTIMIZED -Dhybrid=$HYBRID -Domp=$OPENMP \
+              -Dvec=$VEC -Ddump=$DUMP -Dstats=$STATS -Ddebug=$DEBUG -Dmatt=$MATT \
+              -Dverbose=$VERBOSE -Dpcm=$PCM -Dpapi=$PAPI -Dvtune=$VTUNE \
+              -Dcilkview=$CILKVIEW \
+              . -G "Unix Makefiles"
+    else
+	    cmake -DCILKVIEW_INCLUDE_PATH="$HOME/Programs/CilkTools/include/cilktools/" \
+              -Dversion=$VERSION -Doptimized=$OPTIMIZED -Dhybrid=$HYBRID -Domp=$OPENMP \
+	          -Dvec=$VEC -Ddump=$DUMP -Dstats=$STATS -Ddebug=$DEBUG -Dmatt=$MATT \
+              -Dverbose=$VERBOSE -Dpcm=$PCM -Dpapi=$PAPI -Dvtune=$VTUNE \
+              -Dcilkview=$CILKVIEW \
+              . -G "Unix Makefiles"
+    fi
+fi
+
+make -j 2
