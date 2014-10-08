@@ -1,14 +1,12 @@
-#ifdef CREATE_PERM_AND_TREE
-
 #include <iostream>
 #include <cilk/cilk.h>
+#include <pthread.h>
 
 #include "tools.h"
 #include "permutations.h"
 #include "partitioning.h"
 #include "tree.h"
 
-#include <pthread.h>
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Compare two different D&C trees and display the differences
@@ -81,7 +79,7 @@ void fill_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 	tree.lastSep   = lastElem;
     tree.firstCSR  = firstNode;
     tree.lastCSR   = lastNode;
-    tree.lastFullColor = 0;
+    tree.vecOffset = 0;
 	tree.left   = NULL;
 	tree.right  = NULL;
 	tree.sep    = NULL;
@@ -221,5 +219,3 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
 #endif
 	}
 }
-
-#endif

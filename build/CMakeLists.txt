@@ -1,27 +1,18 @@
 cmake_minimum_required (VERSION 2.6)
 
 # Compilers
-set (EXECUTABLE_OUTPUT_PATH ../bin)
-set (CMAKE_Fortran_COMPILER ifort)
 set (CMAKE_CXX_COMPILER icpc)
-set (CMAKE_C_COMPILER icc)
 
 # Project
-project (MiniApp)
-enable_language (Fortran)
+project (DC_lib)
 find_package (MPI)
+set (LIBRARY_OUTPUT_PATH ../lib/${CMAKE_BUILD_TYPE})
 
 # Flags
-set (flags "-O2 -mkl:sequential -D${version}")
+set (flags "-O2 -mkl:sequential")
 if (${hybrid})
 	set (flags "${flags} -DHYBRID")
 endif (${hybrid})
-if (${optimized})
-	set (flags "${flags} -DOPTIMIZED")
-endif (${optimized})
-if (${omp})
-	set (flags "${flags} -openmp")
-endif (${omp})
 if (${vec} STREQUAL "sse")
     set (flags "${flags} -msse")
     add_definitions (-DVEC_SIZE=2)
@@ -45,102 +36,54 @@ if (${verbose})
     set (CMAKE_VERBOSE_MAKEFILE 1)
     set (flags "${flags} -vec-report6")
 endif (${verbose})
-if (${matt})
-	set (flags "${flags} -finstrument-functions")
-endif (${matt})
-if (${pcm})
-	set (flags "${flags} -DINTEL_PCM")
-endif (${pcm})
-if (${papi})
-	set (flags "${flags} -DPAPI -lpapi")
-endif (${papi})
-if (${vtune})
-	set (flags "${flags} -DVTUNE")
-endif (${vtune})
-if (${cilkview})
-	set (flags "${flags} -DCILKVIEW")
-endif (${cilkview})
-set (CMAKE_C_FLAGS ${flags})
 set (CMAKE_CXX_FLAGS "${flags} -std=c++11")
-set (CMAKE_Fortran_FLAGS "${flags} -fpp -convert big_endian")
-set (CMAKE_EXE_LINKER_FLAGS "${flags} -nofor-main -lstdc++ -lcilkrts")
 
 # Headers
+include_directories (../include)
 include_directories (../src/headers)
-include_directories (../src/DivideAndConquer/headers)
-include_directories (../src/PCM/headers)
 include_directories (${MPI_INCLUDE_PATH})
 include_directories (${METIS_INCLUDE_PATH})
-if (${vtune})
-	include_directories (${VTUNE_INCLUDE_PATH})
-endif (${vtune})
-if (${cilkview})
-	include_directories (${CILKVIEW_INCLUDE_PATH})
-endif (${cilkview})
 
 # Sources
-file (GLOB_RECURSE source_list ../src/*)
+file (GLOB_RECURSE source_list ../src/* ../include/*)
 
-# Executable
-set (exec miniApp_${version})
+# Library
+set (lib DC_lib)
 if (${hybrid})
-	set (exec ${exec}_HYBRID)
+	set (lib ${lib}_HYBRID)
 endif (${hybrid})
-if (${optimized})
-	set (exec ${exec}_OPTI)
-endif (${optimized})
-if (${omp})
-	set (exec ${exec}_OMP)
-endif (${omp})
 if (${vec} STREQUAL "sse")
-    set (exec ${exec}_SSE)
+    set (lib ${lib}_SSE)
 elseif (${vec} STREQUAL "avx")
-    set (exec ${exec}_AVX)
+    set (lib ${lib}_AVX)
 elseif (${vec} STREQUAL "mic")
-    set (exec ${exec}_MIC)
+    set (lib ${lib}_MIC)
 endif (${vec} STREQUAL "sse")
 if (${dump})
-	set (exec ${exec}_Dump)
+	set (lib ${lib}_Dump)
 endif (${dump})
 if (${stats})
-	set (exec ${exec}_Stats)
+	set (lib ${lib}_Stats)
 endif (${stats})
 if (${debug})
-	set (exec ${exec}_Debug)
+	set (lib ${lib}_Debug)
 endif (${debug})
-if (${matt})
-	set (exec ${exec}_MATT)
-endif (${matt})
-if (${pcm})
-	set (exec ${exec}_PCM)
-endif (${pcm})
-if (${papi})
-	set (exec ${exec}_PAPI)
-endif (${papi})
-if (${vtune})
-	set (exec ${exec}_VTune)
-endif (${vtune})
-if (${cilkview})
-	set (exec ${exec}_CilkView)
-endif (${cilkview})
-add_executable (
-	${exec}
+add_library (
+	${lib}
+    SHARED
 	${source_list}
 )
 
 # Link
-set_property (TARGET ${exec} PROPERTY LINKER_LANGUAGE Fortran)
-if (${dump})
-    target_link_libraries (
-        ${exec}
-        ${MPI_LIBRARIES}
-        ${METIS_LIBRARIES}
-        ${VTUNE_LIBRARIES}
-    )
-else (${dump})
-    target_link_libraries (
-        ${exec}
-        ${MPI_LIBRARIES}
-        ${VTUNE_LIBRARIES}
-    )
-endif (${dump})
+#if (${dump})
+#    target_link_libraries (
+#        ${lib}
+#        ${MPI_LIBRARIES}
+#        ${METIS_LIBRARIES}
+#    )
+#else (${dump})
+#    target_link_libraries (
+#        ${lib}
+#        ${MPI_LIBRARIES}
+#    )
+#endif (${dump})

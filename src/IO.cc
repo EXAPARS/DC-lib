@@ -1,4 +1,4 @@
-#include "dc_IO.h"
+#include "IO.h"
 
 // Read recursively the intervals of each node of the D&C tree
 void read_dc_tree (tree_t &tree, ifstream &permAndTree)
@@ -12,7 +12,7 @@ void read_dc_tree (tree_t &tree, ifstream &permAndTree)
 #ifdef HYBRID
     permAndTree.read ((char*)&tree.lastFullColor,  sizeof (int));
 #else
-    tree.lastFullColor = 0;
+    tree.vecOffset = 0;
 #endif
 	permAndTree.read ((char*)&isLeaf, sizeof (bool));
 
@@ -65,7 +65,7 @@ void store_dc_tree (tree_t &tree, ofstream &permAndTree)
     permAndTree.write ((char*)&tree.firstCSR,  sizeof (int));
     permAndTree.write ((char*)&tree.lastCSR,   sizeof (int));
 #ifdef HYBRID
-    permAndTree.write ((char*)&tree.lastFullColor,  sizeof (int));
+    permAndTree.write ((char*)&tree.vecOffset,  sizeof (int));
 #endif
 
 	// If current node is a leaf, dump local leaf interval

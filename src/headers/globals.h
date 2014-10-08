@@ -16,7 +16,7 @@ using namespace std;
 typedef struct tree_s {
     int firstElem, lastElem, lastSep;
     int firstCSR, lastCSR;
-    int lastFullColor;
+    int vecOffset;
     struct tree_s *left, *right, *sep;
 } tree_t;
 

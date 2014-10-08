@@ -1,5 +1,5 @@
-#ifndef DC_IO_H
-#define DC_IO_H
+#ifndef IO_H
+#define IO_H
 
 #include <fstream>
 #include "globals.h"

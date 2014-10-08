@@ -5,8 +5,7 @@
 void permute_double_2d_array (double *tab, int nbItem, int dimItem);
 
 // Permute "tab" 2D array of int using "perm"
-void permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem,
-						   int offset);
+void permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem, int offset);
 
 // Permute "tab" 1D array of int using node permutation
 void permute_int_1d_array (int *tab, int size);

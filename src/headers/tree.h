@@ -2,7 +2,7 @@
 #define TREE_H
 
 #ifdef STATS
-#include <fstream>
+    #include <fstream>
 #endif
 #include "globals.h"
 

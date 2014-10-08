@@ -2,9 +2,7 @@
 #define TOOLS_H
 
 #include <fstream>
-
 #include "globals.h"
-#include "matrix.h"
 
 // Get CPU cycles
 extern "C" uint64_t rdtsc_ ();
