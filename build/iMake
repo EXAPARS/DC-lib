@@ -3,12 +3,6 @@
 # Case insensitive comparisons
 shopt -s nocasematch
 
-# Code version & cleaning
-if [ $# -eq 0 ]; then
-    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
-    exit
-fi
-
 # Options
 HYBRID=0
 DUMP=0
@@ -49,7 +43,7 @@ for i in $@; do
 	fi
 done
 
-if [[ $VEC == 0 ]]; then
+if [[ $HYBRID == 1 ]] && [[ $VEC == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi

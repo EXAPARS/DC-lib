@@ -50,7 +50,7 @@ file (GLOB_RECURSE source_list ../src/* ../include/*)
 # Library
 set (lib DC_lib)
 if (${hybrid})
-	set (lib ${lib}_HYBRID)
+	set (lib ${lib}_Hybrid)
 endif (${hybrid})
 if (${vec} STREQUAL "sse")
     set (lib ${lib}_SSE)
@@ -73,17 +73,3 @@ add_library (
     SHARED
 	${source_list}
 )
-
-# Link
-#if (${dump})
-#    target_link_libraries (
-#        ${lib}
-#        ${MPI_LIBRARIES}
-#        ${METIS_LIBRARIES}
-#    )
-#else (${dump})
-#    target_link_libraries (
-#        ${lib}
-#        ${MPI_LIBRARIES}
-#    )
-#endif (${dump})

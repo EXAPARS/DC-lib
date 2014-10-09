@@ -1,3 +1,5 @@
+#ifdef HYBRID
+
 #include <iostream>
 #include <cilk/cilk.h>
 
@@ -142,3 +144,5 @@ void coloring (int *elemToNode, int nbElem, int nbNodes)
 
     delete[] nodeToElem.value, delete[] nodeToElem.index;
 }
+
+#endif

@@ -125,6 +125,8 @@ void merge_permutations (int *localElemPerm, int globalNbElem, int localNbElem,
 	}
 }
 
+#ifdef HYBRID
+
 // Create coloring permutation array with full vectorial colors stored first &
 // return the index of the last element in a full vectorial color
 int create_coloring_perm (int *perm, int *part, int *card, int size, int nbColors)
@@ -157,6 +159,8 @@ int create_coloring_perm (int *perm, int *part, int *card, int size, int nbColor
     }
     return lastFullColor;
 }
+
+#endif
 
 // Create permutation array from partition array
 void create_perm_array (int *perm, int *part, int size, int nbPart)
