@@ -5,7 +5,10 @@
 #include "globals.h"
 
 // Get CPU cycles
-extern "C" uint64_t rdtsc_ ();
+uint64_t DC_get_cycles ();
+
+// Sort by ascending node values couple arrays using parallel quick sort
+void quick_sort (couple_t *tab, int begin, int end);
 
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size);

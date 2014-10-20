@@ -95,19 +95,19 @@ void renumber_int_array (int *tab, int size, bool isFortran)
 	}
 }
 
-// Apply precomputed permutations
-void apply_transformations (double *coord, int *elemToNode, int *intfNodes,
-							int *dispList, int *boundNodesCode, int nbElem,
-							int nbNodes, int nbIntfNodes, int nbDispNodes)
+// Apply the permutations
+void DC_permutation (double *coord, int *elemToNode, int *intfNodes, int *dispList,
+                     int *boundNodesCode, int nbElem, int dimElem, int nbNodes,
+                     int dimNode, int nbIntfNodes, int nbDispNodes)
 {
-	permute_double_2d_array (coord, nbNodes, DIM_NODE);
-#ifndef CREATE_PERM_AND_TREE
-	permute_int_2d_array (elemToNode, elemPerm, nbElem, DIM_ELEM, 0);
-#endif
-	renumber_int_array (elemToNode, nbElem*DIM_ELEM, true);
-	renumber_int_array (intfNodes, nbIntfNodes, true);
-	renumber_int_array (dispList, nbDispNodes, true);
-	permute_int_1d_array (boundNodesCode, nbNodes);
+    permute_double_2d_array (coord, nbNodes, dimNode);
+    #ifndef TREE_CREATION
+        permute_int_2d_array (elemToNode, elemPerm, nbElem, dimElem, 0);
+    #endif
+    renumber_int_array (elemToNode, nbElem*dimELem, true);
+    renumber_int_array (intfNodes, nbIntfNodes, true);
+    renumber_int_array (dispList, nbDispNodes, true);
+    permute_int_1d_array (boundNodesCode, nbNodes);
 }
 
 // Apply local element permutation to global element permutation

@@ -7,52 +7,17 @@
 #include "partitioning.h"
 #include "tree.h"
 
+// The D&C tree is global in order to persist from one call to the library to another
+tree_t *treeHead = NULL;
+
+// Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Compare two different D&C trees and display the differences
-void compare_dc_trees (tree_t &tree1, tree_t &tree2, int curNode)
+// Compute the edge interval for each leaf of the D&C tree
+void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
+                             int nbNodes)
 {
-	// If trees have not the same topology
-	if ((tree1.left == NULL && tree1.right == NULL) &&
-		(tree2.left != NULL || tree2.right != NULL)) {
-		cout << "Node " << curNode << " -> Tree1 is a leaf, Tree2 is not.\n";
-	}
-	else if ((tree2.left == NULL && tree2.right == NULL)
-		  && (tree1.left != NULL || tree1.right != NULL)) {
-		cout << "Node " << curNode << " -> Tree2 is a leaf, Tree1 is not.\n";
-	}
-	if (tree1.sep == NULL && tree2.sep != NULL) {
-		cout << "Node " << curNode << " -> Tree1 has a sep, Tree2 has not.\n";
-    }
-	else if (tree1.sep != NULL && tree2.sep == NULL) {
-		cout << "Node " << curNode << " -> Tree2 has a sep, Tree1 has not.\n";
-    }
-
-	// If trees have not the same intervals
-	if (tree1.firstElem != tree2.firstElem ||
-		tree1.lastElem  != tree2.lastElem  || tree1.lastSep != tree2.lastSep) {
-		cout << "Node " << curNode << " -> "
-			 << "Tree 1: [" << tree1.firstElem << ", " << tree1.lastElem
-			 << ", " << tree1.lastSep << "], "
-			 << "Tree 2: [" << tree2.firstElem << ", " << tree2.lastElem
-			 << ", " << tree2.lastSep << "]\n";
-	}
-
-	// Left, right & separator recursion
-	if ((tree1.left != NULL && tree1.right != NULL) &&
-		(tree2.left != NULL && tree2.right != NULL)) {
-		compare_dc_trees (*tree1.left,  *tree2.left,  3*curNode+1);
-		compare_dc_trees (*tree1.right, *tree2.right, 3*curNode+2);
-	}
-	if (tree1.sep != NULL && tree2.sep != NULL) {
-		compare_dc_trees (*tree1.sep,   *tree2.sep,   3*curNode+3);
-    }
-}
-
-// Compute the interval of edges of each leaf of the D&C tree
-void edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int nbNodes)
-{
-     // If current node is a leaf
+    // If current node is a leaf
     if (tree.left == NULL && tree.right == NULL) {
         // Get the first and last edges of the leaf
         int firstNode = tree.firstCSR, lastNode = tree.lastCSR;
@@ -70,8 +35,15 @@ void edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int nbNo
     }
 }
 
-// Fill the element intervals of the D&C tree
-void fill_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
+// Wrapper used to get the root of the D&C tree before computing the edge intervals
+// for CSR reset
+void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int nbNodes)
+{
+    compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode, nbNodes);
+}
+
+// Initialize a node of the D&C tree
+void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 				   int firstNode, int lastNode, bool isLeaf)
 {
 	tree.firstElem = firstElem;
@@ -129,11 +101,11 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
 					 int sepOffset)
 #endif
 {
-    // If current node is a leaf, fill D&C tree & exit
+    // If current node is a leaf, initialize it & exit
     int nbPart = lastPart - firstPart + 1;
     int localNbElem = lastElem - firstElem + 1;
     if (nbPart < 2 || localNbElem <= MAX_ELEM_PER_PART) {
-        fill_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, true);
+        init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, true);
 #ifdef STATS
         fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
 #endif
@@ -183,8 +155,8 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
 	}
 	delete[] localElemPerm;
 
-	// Fill D&C tree
-	fill_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
+	// Initialize current node
+	init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
 #ifdef STATS
 	fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem);
 #endif
@@ -218,4 +190,21 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
 						  lastElem);
 #endif
 	}
+}
+
+// Create the D&C tree and the permutations
+void DC_create_tree (int *elemToNode, int nbElem, int nbNodes, int mpiRank)
+{
+    // Allocate the D&C tree & the permutation functions
+    treeHead = new tree_t;
+    elemPerm = new int [nbElem];
+    nodePerm = new int [nbNodes];
+
+    // Create the D&C tree & the permutation functions
+    partitioning (elemToNode, nbElem, nbNodes);
+
+    // Hybrid version with coloring of the leaves of the D&C tree
+    #ifdef HYBRID
+    	coloring (elemToNode, nbElem, nbNodes);
+    #endif
 }

@@ -51,12 +51,77 @@ int create_color_part (int *colorPart, int *colorCard, list_t *elemToElem, int n
     return nbColors;
 }
 
+// Construct element to element array from element to node and node to element
+// Two elements are neighbors if they share a node
+void elem_to_elem (list_t *elemToElem, index_t &nodeToElem, int *elemToNode,
+                   int firstElem, int lastElem)
+{
+	// For each node of given element interval
+    cilk_for (int i = firstElem; i <= lastElem; i++) {
+        int nbNeighbors = 0;
+        for (int j = 0; j < DIM_ELEM; j++) {
+			int node = elemToNode[i*DIM_ELEM+j] - 1;
+			// For each neighbor element of current node
+            for (int k = nodeToElem.index[node];
+                     k < nodeToElem.index[node+1]; k++) {
+                int elemNeighbor = nodeToElem.value[k];
+				// If neighbor element is in the element interval and is not
+                // current element
+                if (elemNeighbor >= firstElem && elemNeighbor <= lastElem &&
+                    elemNeighbor != i) {
+                    bool isNew = true;
+					// If neighbor element is not already stored
+                    for (int l = 0; l < nbNeighbors; l++) {
+                        if ((elemNeighbor - firstElem) ==
+                            elemToElem[i-firstElem].list[l]) {
+							isNew = false;
+                            break;
+						}
+					}
+					// If neighbor is not in the list, add it
+                    if (isNew) {
+                       	elemToElem[i-firstElem].list[nbNeighbors] =
+                            elemNeighbor - firstElem;
+                        nbNeighbors++;
+					}
+				}
+			}
+		}
+        elemToElem[i-firstElem].size = nbNeighbors;
+	}
+}
+
+// Construct node to element structure from element to node
+void node_to_elem (index_t &nodeToElem, int *elemToNode, int nbElem, int nbNodes)
+{
+    couple_t *couple = new couple_t [nbElem * DIM_ELEM];
+    cilk_for (int i = 0; i < nbElem; i++) {
+        for (int j = 0; j < DIM_ELEM; j++) {
+            couple[i*DIM_ELEM+j].elem = i;
+            couple[i*DIM_ELEM+j].node = elemToNode[i*DIM_ELEM+j] - 1;
+        }
+    }
+    quick_sort (couple, 0, nbElem * DIM_ELEM - 1);
+
+    int ctr = 0;
+    for (int i = 0; i < nbNodes; i++) {
+        nodeToElem.index[i] = ctr;
+        while (couple[ctr].node == i) {
+            nodeToElem.value[ctr] = couple[ctr].elem;
+            ctr++;
+			if (ctr == nbElem * DIM_ELEM) break;
+        }
+    }
+    nodeToElem.index[nbNodes] = ctr;
+    delete[] couple;
+}
+
 // Create a coloring permutation for each leaf of the D&C tree
 void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 #ifdef STATS
 					  int *elemPerColor, ofstream &colorPerLeaf,
 #endif
-					  int globalNbElem)
+					  int globalNbElem, int dimElem)
 {
 	// If current node is a leaf
 	if (tree.left == NULL && tree.right == NULL) {
@@ -89,7 +154,7 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 		delete[] colorPart;
 
 		// Apply local permutation on elemToNode & on the global element permutation
-		permute_int_2d_array (elemToNode, colorPerm, localNbElem, DIM_ELEM,
+		permute_int_2d_array (elemToNode, colorPerm, localNbElem, dimElem,
                               tree.firstElem);
 		merge_permutations (colorPerm, globalNbElem, localNbElem, tree.firstElem,
                             tree.lastSep);
@@ -99,32 +164,32 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 		cilk_spawn
 #ifdef STATS
 		leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
-						 colorPerLeaf, globalNbElem);
+						 colorPerLeaf, globalNbElem, dimElem);
 		leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
-						 colorPerLeaf, globalNbElem);
+						 colorPerLeaf, globalNbElem, dimElem);
 #else
-		leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem);
-		leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem);
+		leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
+		leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
 		cilk_sync;
 		if (tree.sep != NULL) {
 #ifdef STATS
 			leaves_coloring (*tree.sep, nodeToElem, elemToNode, elemPerColor,
-							 colorPerLeaf, globalNbElem);
+							 colorPerLeaf, globalNbElem, dimElem);
 #else
-            leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem);
+            leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
 		}
 	}
 }
 
 // Coloring of the D&C tree
-void coloring (int *elemToNode, int nbElem, int nbNodes)
+void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
     // List the neighbor elements of each node
     index_t nodeToElem;
     nodeToElem.index = new int [nbNodes + 1];
-    nodeToElem.value = new int [nbElem * DIM_ELEM];
+    nodeToElem.value = new int [nbElem * dimElem];
     node_to_elem (nodeToElem, elemToNode, nbElem, nbNodes);
 
     #ifdef STATS

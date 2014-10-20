@@ -4,11 +4,37 @@
 #include "tools.h"
 
 // Get CPU cycles
-uint64_t rdtsc_ ()
+uint64_t DC_get_cycles ()
 {
 	uint64_t a, d;
 	__asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
 	return (d<<32) | a;
+}
+
+// Sort by ascending node values couple arrays using parallel quick sort
+void quick_sort (couple_t *tab, int begin, int end)
+{
+    int left = begin - 1, right = end + 1, pivot = tab[begin].node;
+
+    if (begin < end) {
+        while (1)
+        {
+            do right--; while(tab[right].node > pivot);
+            do left++;  while(tab[left].node  < pivot);
+
+            if (left < right) {
+                couple_t tmp = tab[left];
+                tab[left]    = tab[right];
+                tab[right]   = tmp;
+            }
+            else break;
+        }
+
+        cilk_spawn
+        quick_sort (tab, begin, right);
+        quick_sort (tab, right+1, end);
+        cilk_sync;
+    }
 }
 
 // Return the euclidean norm of given array

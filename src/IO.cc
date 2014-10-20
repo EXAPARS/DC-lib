@@ -1,24 +1,24 @@
 #include "IO.h"
 
-// Read recursively the intervals of each node of the D&C tree
-void read_dc_tree (tree_t &tree, ifstream &permAndTree)
+// Read recursively each node of the D&C tree
+void recursive_reading (tree_t &tree, ifstream &treeFile)
 {
 	bool isLeaf;
-	permAndTree.read ((char*)&tree.firstElem, sizeof (int));
-	permAndTree.read ((char*)&tree.lastElem,  sizeof (int));
-	permAndTree.read ((char*)&tree.lastSep,   sizeof (int));
-    permAndTree.read ((char*)&tree.firstCSR,  sizeof (int));
-    permAndTree.read ((char*)&tree.lastCSR,   sizeof (int));
-#ifdef HYBRID
-    permAndTree.read ((char*)&tree.lastFullColor,  sizeof (int));
-#else
-    tree.vecOffset = 0;
-#endif
-	permAndTree.read ((char*)&isLeaf, sizeof (bool));
+	treeFile.read ((char*)&tree.firstElem, sizeof (int));
+	treeFile.read ((char*)&tree.lastElem,  sizeof (int));
+	treeFile.read ((char*)&tree.lastSep,   sizeof (int));
+    treeFile.read ((char*)&tree.firstCSR,  sizeof (int));
+    treeFile.read ((char*)&tree.lastCSR,   sizeof (int));
+    #ifdef HYBRID
+        treeFile.read ((char*)&tree.vecOffset, sizeof (int));
+    #else
+        tree.vecOffset = 0;
+    #endif
+	treeFile.read ((char*)&isLeaf, sizeof (bool));
 
-	tree.left   = NULL;
-	tree.right  = NULL;
-	tree.sep    = NULL;
+	tree.left  = NULL;
+	tree.right = NULL;
+	tree.sep   = NULL;
 
 	if (isLeaf == false) {
 		tree.left  = new tree_t;
@@ -28,79 +28,82 @@ void read_dc_tree (tree_t &tree, ifstream &permAndTree)
 		}
 
 		// Left, right & separator recursion
-		read_dc_tree (*tree.left,  permAndTree);
-		read_dc_tree (*tree.right, permAndTree);
+		read_dc_tree (*tree.left,  treeFile);
+		read_dc_tree (*tree.right, treeFile);
 		if (tree.sep != NULL) {
-			read_dc_tree (*tree.sep, permAndTree);
+			read_dc_tree (*tree.sep, treeFile);
 		}
 	}
 }
 
-// Read the permutation functions and the D&C tree
-void read_perm_and_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
+// Read the D&C tree and the permutation functions
+void DC_read_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
 {
-	string fileName = "../data" + meshName + "/permAndTree/" +
-#ifdef HYBRID
+	string fileName = "../data" + meshName + "/DC_tree/" +
+    #ifdef HYBRID
                       "Hybrid_" +
-#else
+    #else
                       "DC_" +
-#endif
+    #endif
                       to_string ((long long)MAX_ELEM_PER_PART) + "_" +
                       to_string ((long long)nbBlocks) + "_" +
                       to_string ((long long)mpiRank);
-	ifstream permAndTree (fileName, ios::in | ios::binary);
-	permAndTree.read ((char*)elemPerm, nbElem  * sizeof (int));
-	permAndTree.read ((char*)nodePerm, nbNodes * sizeof (int));
-	read_dc_tree (*treeHead, permAndTree);
-	permAndTree.close ();
+
+	ifstream treeFile (fileName, ios::in | ios::binary);
+	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
+	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));
+	recursive_reading (*treeHead, treeFile);
+	treeFile.close ();
 }
 
-// Store recursively the intervals of each node of the D&C tree
-void store_dc_tree (tree_t &tree, ofstream &permAndTree)
+// Store recursively each node of the D&C tree
+void recursive_storing (tree_t &tree, ofstream &treeFile)
 {
     bool isLeaf;
-    permAndTree.write ((char*)&tree.firstElem, sizeof (int));
-    permAndTree.write ((char*)&tree.lastElem,  sizeof (int));
-    permAndTree.write ((char*)&tree.lastSep,   sizeof (int));
-    permAndTree.write ((char*)&tree.firstCSR,  sizeof (int));
-    permAndTree.write ((char*)&tree.lastCSR,   sizeof (int));
-#ifdef HYBRID
-    permAndTree.write ((char*)&tree.vecOffset,  sizeof (int));
-#endif
+    treeFile.write ((char*)&tree.firstElem, sizeof (int));
+    treeFile.write ((char*)&tree.lastElem,  sizeof (int));
+    treeFile.write ((char*)&tree.lastSep,   sizeof (int));
+    treeFile.write ((char*)&tree.firstCSR,  sizeof (int));
+    treeFile.write ((char*)&tree.lastCSR,   sizeof (int));
+    #ifdef HYBRID
+        treeFile.write ((char*)&tree.vecOffset, sizeof (int));
+    #endif
 
-	// If current node is a leaf, dump local leaf interval
 	if (tree.left == NULL && tree.right == NULL) {
 		isLeaf = true;
-		permAndTree.write ((char*)&isLeaf, sizeof (bool));
+		treeFile.write ((char*)&isLeaf, sizeof (bool));
 	}
 	else {
         isLeaf = false;
-        permAndTree.write ((char*)&isLeaf, sizeof (bool));
+        treeFile.write ((char*)&isLeaf, sizeof (bool));
 
 		// Left, right & separator recursion
-		store_dc_tree (*tree.left,  permAndTree);
-		store_dc_tree (*tree.right, permAndTree);
+		store_dc_tree (*tree.left,  treeFile);
+		store_dc_tree (*tree.right, treeFile);
 		if (tree.sep != NULL) {
-			store_dc_tree (*tree.sep, permAndTree);
+			store_dc_tree (*tree.sep, treeFile);
 		}
 	}
 }
 
-// Store the permutation functions and the D&C tree to a binary file
-void store_perm_and_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
+// Store the D&C tree and the permutation functions to a binary file
+void DC_store_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
 {
-    string fileName = "../data" + meshName + "/permAndTree/" +
-#ifdef HYBRID
+    string fileName = "../data" + meshName + "/DC_tree/" +
+    #ifdef HYBRID
                       "Hybrid_" +
-#else
+    #else
                       "DC_" +
-#endif
+    #endif
                       to_string ((long long)MAX_ELEM_PER_PART) + "_" +
                       to_string ((long long)nbBlocks) + "_" +
                       to_string ((long long)mpiRank);
-    ofstream permAndTree (fileName, ios::out | ios::trunc | ios::binary);
-    permAndTree.write ((char*)elemPerm, nbElem  * sizeof (int));
-    permAndTree.write ((char*)nodePerm, nbNodes * sizeof (int));
-    store_dc_tree (*treeHead, permAndTree);
-    permAndTree.close ();
+
+    ofstream treeFile (fileName, ios::out | ios::trunc | ios::binary);
+    treeFile.write ((char*)elemPerm, nbElem  * sizeof (int));
+    treeFile.write ((char*)nodePerm, nbNodes * sizeof (int));
+    recursive_storing (*treeHead, treeFile);
+    treeFile.close ();
+
+    delete[] nodePerm, delete[] elemPerm; 
 }
