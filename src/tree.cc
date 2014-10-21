@@ -27,8 +27,8 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
     else {
         // Left & right recursion
         cilk_spawn
-        edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
-        edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
+        compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+        compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
 
         // Synchronization
         cilk_sync;
@@ -67,21 +67,22 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 
 // Create element partition & count left & separator elements
 void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem,
-                       int separator, int offset, int *nbLeftElem, int *nbSepElem)
+                       int dimElem, int separator, int offset, int *nbLeftElem,
+                       int *nbSepElem)
 {
 	for (int i = 0; i < nbElem; i++) {
 		int node, leftCtr = 0, rightCtr = 0;
 
-		for (int j = 0; j < DIM_ELEM; j++) {
-			node = elemToNode[(i+offset)*DIM_ELEM+j];
+		for (int j = 0; j < dimElem; j++) {
+			node = elemToNode[(i+offset)*dimElem+j];
 			if (nodePart[node] <= separator) leftCtr++;
 			else                             rightCtr++;
 		}
-		if (leftCtr == DIM_ELEM) {
+		if (leftCtr == dimElem) {
 			elemPart[i] = 0;
 			(*nbLeftElem)++;
 		}
-		else if (rightCtr == DIM_ELEM) {
+		else if (rightCtr == dimElem) {
 			elemPart[i] = 1;
 		}
 		else {
@@ -92,13 +93,14 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 }
 
 // Compute the interval of nodes and elements at each node of the D&C tree
-void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                     int *nodePartSize, int globalNbElem, int firstPart, int lastPart,
-                     int firstElem, int lastElem, int firstNode, int lastNode,
+void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
+                              int *nodePart, int *nodePartSize, int globalNbElem,
+                              int dimElem, int firstPart, int lastPart, int firstElem,
+                              int lastElem, int firstNode, int lastNode, int sepOffset
 #ifdef STATS
-					 int sepOffset, ofstream &dcFile, int curNode, int LRS)
+                              , ofstream &dcFile, int curNode, int LRS)
 #else
-					 int sepOffset)
+                              )
 #endif
 {
     // If current node is a leaf, initialize it & exit
@@ -106,9 +108,9 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
     int localNbElem = lastElem - firstElem + 1;
     if (nbPart < 2 || localNbElem <= MAX_ELEM_PER_PART) {
         init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, true);
-#ifdef STATS
-        fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
-#endif
+        #ifdef STATS
+            fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
+        #endif
         return;
 	}
 
@@ -119,12 +121,12 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
 	// Create local element partition & count left & separator elements
 	int *localElemPart = new int [localNbElem];
 	if (sepToNode == NULL) {
-        create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, separator,
-                          firstElem, &nbLeftElem, &nbSepElem);
+        create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, dimElem,
+                          separator, firstElem, &nbLeftElem, &nbSepElem);
 	}
 	else {
-        create_elem_part (localElemPart, nodePart, sepToNode, localNbElem, separator,
-                          sepOffset, &nbLeftElem, &nbSepElem);
+        create_elem_part (localElemPart, nodePart, sepToNode, localNbElem, dimElem,
+                          separator, sepOffset, &nbLeftElem, &nbSepElem);
 	}
 
     // Count the left nodes if this not a separator
@@ -147,53 +149,54 @@ void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePar
     pthread_mutex_unlock (&mergeMutex);
 
 	// Permute elemToNode and sepToNode with local element permutation
-	permute_int_2d_array (elemToNode, localElemPerm, localNbElem, DIM_ELEM,
-                          firstElem);
+	permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem, firstElem);
 	if (sepToNode != NULL) {
-		permute_int_2d_array (sepToNode, localElemPerm, localNbElem, DIM_ELEM,
+		permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
                               sepOffset);
 	}
 	delete[] localElemPerm;
 
 	// Initialize current node
 	init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
-#ifdef STATS
-	fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem);
-#endif
+    #ifdef STATS
+        fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem);
+    #endif
 
 	// Left & right recursion
 	cilk_spawn
-	create_dc_tree (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
-                    globalNbElem, firstPart, separator, firstElem,
-                    firstElem+nbLeftElem-1, firstNode, firstNode+nbLeftNodes-1,
-#ifdef STATS
-					sepOffset, dcFile, 3*curNode+1, 1);
-#else
-					sepOffset);
-#endif
-	create_dc_tree (*tree.right, elemToNode, sepToNode, nodePart, nodePartSize,
-                    globalNbElem, separator+1, lastPart, firstElem+nbLeftElem,
-                    lastElem-nbSepElem, firstNode+nbLeftNodes, lastNode,
-#ifdef STATS
-                    sepOffset+nbLeftElem, dcFile, 3*curNode+2, 2);
-#else
-                    sepOffset+nbLeftElem);
-#endif
+	recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
+                             globalNbElem, dimElem, firstPart, separator, firstElem,
+                             firstElem+nbLeftElem-1, firstNode,
+                             firstNode+nbLeftNodes-1, sepOffset
+    #ifdef STATS
+    					     , dcFile, 3*curNode+1, 1);
+    #else
+                             );
+    #endif
+	recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
+                             nodePartSize, globalNbElem, dimElem, separator+1,
+                             lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
+                             firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
+    #ifdef STATS
+                             , dcFile, 3*curNode+2, 2);
+    #else
+                             );
+    #endif
 
 	// D&C partitioning of separator elements
 	cilk_sync;
 	if (nbSepElem > 0) {
 		sep_partitioning (*tree.sep, elemToNode, globalNbElem, lastElem-nbSepElem+1,
-#ifdef STATS
+        #ifdef STATS
 						  lastElem, dcFile, 3*curNode+3);
-#else
+        #else
 						  lastElem);
-#endif
+        #endif
 	}
 }
 
 // Create the D&C tree and the permutations
-void DC_create_tree (int *elemToNode, int nbElem, int nbNodes, int mpiRank)
+void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -205,6 +208,6 @@ void DC_create_tree (int *elemToNode, int nbElem, int nbNodes, int mpiRank)
 
     // Hybrid version with coloring of the leaves of the D&C tree
     #ifdef HYBRID
-    	coloring (elemToNode, nbElem, nbNodes);
+    	coloring (elemToNode, nbElem, dimElem, nbNodes);
     #endif
 }

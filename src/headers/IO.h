@@ -4,16 +4,16 @@
 #include <fstream>
 #include "globals.h"
 
-// Read recursively the intervals of each node of the D&C tree
-void read_dc_tree (tree_t &tree, ifstream &permAndTree);
+// Read recursively each node of the D&C tree
+void recursive_reading (tree_t &tree, ifstream &treeFile);
 
-// Read the permutation functions and the D&C tree
-void read_perm_and_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank);
+// Read the D&C tree and the permutation functions
+void DC_read_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank);
 
-// Store recursively the intervals of each node of the D&C tree
-void store_dc_tree (tree_t &tree, ofstream &permAndTree);
+// Store recursively each node of the D&C tree
+void recursive_storing (tree_t &tree, ofstream &treeFile);
 
-// Store the permutation functions and the D&C tree to a binary file
-void store_perm_and_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank);
+// Store the D&C tree and the permutation functions to a binary file
+void DC_store_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank);
 
 #endif

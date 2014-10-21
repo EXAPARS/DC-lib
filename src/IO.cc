@@ -28,10 +28,10 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
 		}
 
 		// Left, right & separator recursion
-		read_dc_tree (*tree.left,  treeFile);
-		read_dc_tree (*tree.right, treeFile);
+		recursive_reading (*tree.left,  treeFile);
+		recursive_reading (*tree.right, treeFile);
 		if (tree.sep != NULL) {
-			read_dc_tree (*tree.sep, treeFile);
+			recursive_reading (*tree.sep, treeFile);
 		}
 	}
 }
@@ -78,10 +78,10 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
         treeFile.write ((char*)&isLeaf, sizeof (bool));
 
 		// Left, right & separator recursion
-		store_dc_tree (*tree.left,  treeFile);
-		store_dc_tree (*tree.right, treeFile);
+		recursive_storing (*tree.left,  treeFile);
+		recursive_storing (*tree.right, treeFile);
 		if (tree.sep != NULL) {
-			store_dc_tree (*tree.sep, treeFile);
+			recursive_storing (*tree.sep, treeFile);
 		}
 	}
 }

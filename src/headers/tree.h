@@ -6,28 +6,35 @@
 #endif
 #include "globals.h"
 
-// Compare two different D&C trees and display the differences
-void compare_dc_trees (tree_t &tree1, tree_t &tree2, int curNode);
+// Compute the edge interval for each leaf of the D&C tree
+void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
+                             int nbNodes);
 
-// Compute the interval of edges of each leaf of the D&C tree
-void edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int nbNodes);
+// Wrapper used to get the root of the D&C tree before computing the edge intervals
+// for CSR reset
+void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int nbNodes);
 
-// Fill the element intervals of the D&C tree
-void fill_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
+// Initialize a node of the D&C tree
+void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 				   int firstNode, int lastNode, bool isLeaf);
 
 // Create element partition & count left & separator elements
 void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem,
-                       int separator, int offset, int *nbLeftElem, int *nbSepElem);
+                       int dimElem, int separator, int offset, int *nbLeftElem,
+                       int *nbSepElem);
 
 // Compute the interval of nodes and elements at each node of the D&C tree
-void create_dc_tree (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                     int *nodePartSize, int globalNbElem, int firstPart, int lastPart,
-                     int firstElem, int lastElem, int firstNode, int lastNode,
+void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
+                              int *nodePart, int *nodePartSize, int globalNbElem,
+                              int dimElem, int firstPart, int lastPart, int firstElem,
+                              int lastElem, int firstNode, int lastNode, int sepOffset
 #ifdef STATS
-					 int sepOffset, ofstream &dcFile, int curNode, int LRS);
+                              , ofstream &dcFile, int curNode, int LRS);
 #else
-					 int sepOffset);
+                              );
 #endif
+
+// Create the D&C tree and the permutations
+void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes);
 
 #endif

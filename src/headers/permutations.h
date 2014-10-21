@@ -13,18 +13,20 @@ void permute_int_1d_array (int *tab, int size);
 // Renumber "tab" array of int using node permutation
 void renumber_int_array (int *tab, int size, bool isFortran);
 
-// Apply precomputed permutations
-void apply_transformations (double *coord, int *elemToNode, int *intfNodes,
-                            int *dispList, int *boundNodesCode, int nbElem,
-                            int nbNodes, int nbIntfNodes, int nbDispNodes);
+// Apply the permutations
+void DC_permutation (double *coord, int *elemToNode, int *intfNodes, int *dispList,
+                     int *boundNodesCode, int nbElem, int dimElem, int nbNodes,
+                     int dimNode, int nbIntfNodes, int nbDispNodes);
 
 // Apply local element permutation to global element permutation
 void merge_permutations (int *localElemPerm, int globalNbElem, int localNbElem,
 						 int firstElem, int lastElem);
 
-// Create coloring permutation array with full vectorial colors stored first &
-// return the index of the last element in a full vectorial color
-int create_coloring_perm (int *perm, int *part, int *card, int size, int nbColors);
+#ifdef HYBRID
+    // Create coloring permutation array with full vectorial colors stored first &
+    // return the index of the last element in a full vectorial color
+    int create_coloring_perm (int *perm, int *part, int *card, int size, int nbColors);
+#endif
 
 // Create permutation array from partition array
 void create_perm_array (int *perm, int *part, int size, int nbPart);

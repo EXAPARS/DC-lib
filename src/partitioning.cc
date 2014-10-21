@@ -1,4 +1,4 @@
-#ifdef CREATE_PERM_AND_TREE
+#ifdef TREE_CREATION
 
 #include <string.h>
 #include <math.h>
@@ -20,7 +20,7 @@ void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
     int nEdges, *nPtr, *nInd, *marker;
 
     nPtr = new int [nbNodes + 1] ();
-    for (int i = 0; i < DIM_ELEM * nbElem; i++) {
+    for (int i = 0; i < dimElem * nbElem; i++) {
         nPtr[elemToNode[i]]++;
     }
     for (int i = 1; i < nbNodes; i++) {
@@ -33,8 +33,8 @@ void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
 
     nInd = new int [nPtr[nbNodes]];
     for (int i = 0; i < nbElem; i++) {
-        for (int j = 0; j < DIM_ELEM; j++) {
-            nInd[nPtr[elemToNode[i*DIM_ELEM+j]]++] = i;
+        for (int j = 0; j < dimElem; j++) {
+            nInd[nPtr[elemToNode[i*dimElem+j]]++] = i;
         }
     }
     for (int i = nbNodes; i > 0; i--) {
@@ -48,8 +48,8 @@ void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
     for (int i = 0; i < nbNodes; i++) {
         marker[i] = i;
         for (int j = nPtr[i]; j < nPtr[i+1]; j++) {
-            int jj = DIM_ELEM * nInd[j];
-            for (int k = 0; k < DIM_ELEM; k++) {
+            int jj = dimElem * nInd[j];
+            for (int k = 0; k < dimElem; k++) {
                 int kk = elemToNode[jj];
                 if (marker[kk] != i) {
                     marker[kk] = i;
@@ -69,9 +69,9 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
                       int lastSepElem)
 {
     int nbSepNodes = 0;
-    int *sepRenum = new int [(lastSepElem - firstSepElem + 1) * DIM_ELEM];
+    int *sepRenum = new int [(lastSepElem - firstSepElem + 1) * dimElem];
 
-	for (int i = firstSepElem * DIM_ELEM, j = 0; i < (lastSepElem+1)*DIM_ELEM;
+	for (int i = firstSepElem * dimElem, j = 0; i < (lastSepElem+1)*dimElem;
              i++, j++) {
 		int newNode, oldNode = elemToNode[i];
 		bool isNew = true;
@@ -112,7 +112,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
     }
 
     // Create temporal elemToNode containing the separator elements
-    int *sepToNode = new int [nbSepElem * DIM_ELEM];
+    int *sepToNode = new int [nbSepElem * dimElem];
     int nbSepNodes = create_sepToNode (sepToNode, elemToNode, firstSepElem,
                                        lastSepElem);
 
@@ -132,13 +132,13 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    create_dc_tree (tree, elemToNode, sepToNode, nodePart, NULL, globalNbElem,
-                    0, nbSepPart-1, firstSepElem, lastSepElem, -1, -1, 0
-#ifdef STATS
-                    , dcFile, curNode, -1);
-#else
-                    );
-#endif
+    recursive_tree_creation (tree, elemToNode, sepToNode, nodePart, NULL, globalNbElem,
+                             dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, -1, -1
+    #ifdef STATS
+                             , 0, dcFile, curNode, -1);
+    #else
+                             , 0);
+    #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
@@ -146,7 +146,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
 void partitioning (int *elemToNode, int nbElem, int nbNodes)
 {
 	// Fortran to C elemToNode conversion
-    cilk_for (int i = 0; i < nbElem * DIM_ELEM; i++) {
+    cilk_for (int i = 0; i < nbElem * dimElem; i++) {
         elemToNode[i]--;
     }
 
@@ -173,19 +173,21 @@ void partitioning (int *elemToNode, int nbElem, int nbNodes)
     }
 
 	// Create D&C tree & its dot file
-#ifdef STATS
-    string fileName = "dcTree_" + meshName + "_" +
-                      to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
-	ofstream dcFile (fileName, ios::out | ios::trunc);
-	init_dc_file (dcFile, nbPart);
-	create_dc_tree (*treeHead, elemToNode, NULL, nodePart, nodePartSize, nbElem,
-                    0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
-	close_dc_file (dcFile);
-	dc_stat ();
-#else
-	create_dc_tree (*treeHead, elemToNode, NULL, nodePart, nodePartSize, nbElem,
-                    0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0);
-#endif
+    #ifdef STATS
+        string fileName = "dcTree_" + meshName + "_" +
+                          to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
+    	ofstream dcFile (fileName, ios::out | ios::trunc);
+    	init_dc_file (dcFile, nbPart);
+    	recursive_tree_creation (*treeHead, elemToNode, NULL, nodePart, nodePartSize,
+                                 nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0,
+                                 nbNodes-1, 0, dcFile, 0, -1);
+    	close_dc_file (dcFile);
+    	dc_stat ();
+    #else
+    	recursive_tree_creation (*treeHead, elemToNode, NULL, nodePart, nodePartSize,
+                                 nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0,
+                                 nbNodes-1, 0);
+    #endif
     delete[] nodePartSize;
 
 	// Create node permutation from node partition
@@ -193,7 +195,7 @@ void partitioning (int *elemToNode, int nbElem, int nbNodes)
 	delete[] nodePart;
 
 	// C to Fortran elemToNode conversion
-	cilk_for (int i = 0; i < nbElem * DIM_ELEM; i++) {
+	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
 		elemToNode[i]++;
 	}
 }

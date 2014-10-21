@@ -2,9 +2,9 @@
 #include "assembly.h"
 
 // Follow the D&C tree to execute the assembly step in parallel
-void assembly (tree_t &tree, void (*userSeqFct) (DCArgs_t *, void *),
+void assembly (void (*userSeqFct) (DCArgs_t *, void *),
                void (*userVecFct) (DCArgs_t *, void *), void *userArgs,
-               double *nodeToNodeValue, int operatorDim)
+               double *nodeToNodeValue, int operatorDim, tree_t &tree)
 {
     // If current node is a leaf, call the appropriate assembly function
     if (tree.left == NULL && tree.right == NULL) {
@@ -34,18 +34,18 @@ void assembly (tree_t &tree, void (*userSeqFct) (DCArgs_t *, void *),
     else {
         // Left & right recursion
         cilk_spawn
-        assembly (*tree.left, userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                  operatorDim);
-        assembly (*tree.right, userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                  operatorDim);
+        assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                  *tree.left);
+        assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                  *tree.right);
 
         // Synchronization
         cilk_sync;
 
         // Separator recursion, if it is not empty
         if (tree.sep != NULL) {
-            assembly (*tree.sep, userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                      operatorDim);
+            assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                      *tree.sep);
         }
     }
 }
@@ -56,6 +56,6 @@ void DC_assembly (void (*userSeqFct) (DCArgs_t *, void *),
                   void (*userVecFct) (DCArgs_t *, void *),
                   void *userArgs, double *nodeToNodeValue, int operatorDim)
 {
-    assembly (*treeHead, userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-              operatorDim);
+    assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+              *treeHead);
 }
