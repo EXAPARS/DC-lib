@@ -186,11 +186,11 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
 	// D&C partitioning of separator elements
 	cilk_sync;
 	if (nbSepElem > 0) {
-		sep_partitioning (*tree.sep, elemToNode, globalNbElem, lastElem-nbSepElem+1,
+		sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem,
         #ifdef STATS
-						  lastElem, dcFile, 3*curNode+3);
+						  lastElem-nbSepElem+1, lastElem, dcFile, 3*curNode+3);
         #else
-						  lastElem);
+						  lastElem-nbSepElem+1, lastElem);
         #endif
 	}
 }
@@ -204,7 +204,7 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     nodePerm = new int [nbNodes];
 
     // Create the D&C tree & the permutation functions
-    partitioning (elemToNode, nbElem, nbNodes);
+    partitioning (elemToNode, nbElem, dimElem, nbNodes);
 
     // Hybrid version with coloring of the leaves of the D&C tree
     #ifdef HYBRID

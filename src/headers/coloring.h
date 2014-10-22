@@ -3,8 +3,8 @@
 
 #include "globals.h"
 
-#define NB_BLOCKS 32                                                                     
-#define BLOCK_SIZE sizeof (int)                                                          
+#define NB_BLOCKS 32
+#define BLOCK_SIZE sizeof (int)
 #define MAX_COLOR (NB_BLOCKS * BLOCK_SIZE)
 
 typedef struct {

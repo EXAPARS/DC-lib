@@ -15,7 +15,7 @@ pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Create a nodal graph from a tetrahedron mesh (created from METIS)
 void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
-                    int nbElem, int nbNodes)
+                    int nbElem, int dimElem, int nbNodes)
 {
     int nEdges, *nPtr, *nInd, *marker;
 
@@ -66,7 +66,7 @@ void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
 // Create temporal sepToNode array containing separator elements indexed
 // contiguously from 0 to nbSepElem and return the number of separator nodes
 int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
-                      int lastSepElem)
+                      int lastSepElem, int dimElem)
 {
     int nbSepNodes = 0;
     int *sepRenum = new int [(lastSepElem - firstSepElem + 1) * dimElem];
@@ -92,7 +92,7 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
+void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
                        int firstSepElem, int lastSepElem
 #ifdef STATS
 					   , ofstream &dcFile, int curNode)
@@ -104,7 +104,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
     int nbSepElem = lastSepElem - firstSepElem + 1;
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
-        fill_dc_tree (tree, firstSepElem, lastSepElem, 0, -1, -1, true);
+        init_dc_tree (tree, firstSepElem, lastSepElem, 0, -1, -1, true);
 #ifdef STATS
         fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3);
 #endif
@@ -114,14 +114,14 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
     // Create temporal elemToNode containing the separator elements
     int *sepToNode = new int [nbSepElem * dimElem];
     int nbSepNodes = create_sepToNode (sepToNode, elemToNode, firstSepElem,
-                                       lastSepElem);
+                                       lastSepElem, dimElem);
 
     // Configure METIS & compute the node partitioning of the separators
     int constraint = 1, objVal;
     int *graphIndex = new int [nbSepNodes + 1];
     int *graphValue = new int [nbSepNodes * 15];
     int *nodePart   = new int [nbSepNodes];
-    mesh_to_nodal (graphIndex, graphValue, sepToNode, nbSepElem, nbSepNodes);
+    mesh_to_nodal (graphIndex, graphValue, sepToNode, nbSepElem, dimElem, nbSepNodes);
     // Execution is correct without mutex although cilkscreen detects many race
     // conditions. Check if the problem is solved with future version of METIS
     pthread_mutex_lock (&metisMutex);
@@ -143,7 +143,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem,
 }
 
 // Divide & Conquer partitioning of elemToNode array
-void partitioning (int *elemToNode, int nbElem, int nbNodes)
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
 	// Fortran to C elemToNode conversion
     cilk_for (int i = 0; i < nbElem * dimElem; i++) {
@@ -156,7 +156,7 @@ void partitioning (int *elemToNode, int nbElem, int nbNodes)
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
 	int *nodePart   = new int [nbNodes];
-    mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, nbNodes);
+    mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue,
                               NULL, NULL, NULL, &nbPart, NULL, NULL, NULL,
                               &objVal, nodePart);
