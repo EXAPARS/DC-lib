@@ -1,7 +1,7 @@
 #ifndef COLORING_H
 #define COLORING_H
 
-#include "DC_lib.h"
+#include "DC.h"
 
 #define NB_BLOCKS 32
 #define BLOCK_SIZE sizeof (int)

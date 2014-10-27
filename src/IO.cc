@@ -42,6 +42,11 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
 // Read the D&C tree and the permutation functions
 void DC_read_tree (string &treePath, int nbElem, int nbNodes)
 {
+    // Allocate the D&C tree & the permutation functions
+    treeHead = new tree_t;
+    elemPerm = new int [nbElem];
+    nodePerm = new int [nbNodes];
+
 	ifstream treeFile (treePath, ios::in | ios::binary);
 	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
 	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));

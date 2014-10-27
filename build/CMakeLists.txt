@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 2.6)
 set (CMAKE_CXX_COMPILER icpc)
 
 # Project
-project (DC_lib)
+project (DC)
 find_package (MPI)
 set (LIBRARY_OUTPUT_PATH ../lib/${CMAKE_BUILD_TYPE})
 

@@ -1,5 +1,5 @@
-#ifndef DC_LIB_H
-#define DC_LIB_H
+#ifndef DC_H
+#define DC_H
 
 #include <stdint.h>
 #include <string>

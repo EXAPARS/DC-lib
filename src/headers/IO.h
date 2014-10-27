@@ -2,7 +2,7 @@
 #define IO_H
 
 #include <fstream>
-#include "DC_lib.h"
+#include "DC.h"
 
 using namespace std;
 

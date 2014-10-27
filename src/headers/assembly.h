@@ -1,7 +1,7 @@
 #ifndef ASSEMBLY_H
 #define ASSEMBLY_H
 
-#include "DC_lib.h"
+#include "DC.h"
 
 // Follow the D&C tree to execute the assembly step in parallel
 void recursive_assembly (void (*userSeqFct) (void *, int, int),
