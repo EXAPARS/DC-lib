@@ -6,7 +6,7 @@ shopt -s nocasematch
 # Options
 HYBRID=0
 DUMP=0
-VEC=0
+ARCHI=0
 STATS=0
 DEBUG=0
 VERBOSE=0
@@ -25,11 +25,11 @@ for i in $@; do
     elif [[ $i == "hybrid" ]]; then
         HYBRID=1
     elif [[ $i == "sse" ]]; then
-        VEC="sse"
+        ARCHI="sse"
     elif [[ $i == "avx" ]]; then
-        VEC="avx"
+        ARCHI="avx"
     elif [[ $i == "mic" ]]; then
-        VEC="mic"
+        ARCHI="mic"
 	elif [[ $i == "dump" ]]; then
 		DUMP=1
 	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
@@ -43,13 +43,13 @@ for i in $@; do
 	fi
 done
 
-if [[ $HYBRID == 1 ]] && [[ $VEC == 0 ]]; then
+if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
 
 # Cross compile for MIC
-if [[ $VEC == "mic" ]]; then
+if [[ $ARCHI == "mic" ]]; then
 	export CXX=icpc
 	export CFLAGS="-mmic"
 	export CXXFLAGS=$CFLAGS
@@ -60,25 +60,23 @@ if [[ $VEC == "mic" ]]; then
     if [[ $DUMP == 1 ]]; then
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
 	          -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
-	          -DMETIS_LIBRARIES="$HOME/Programs/METIS/lib/libmetis.a" \
-              -Dhybrid=$HYBRID -Dvec=$VEC -Ddump=$DUMP \
+              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
               -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
               . -G "Unix Makefiles"
     else
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -Dhybrid=$HYBRID -Dvec=$VEC -Ddump=$DUMP \
+              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
               -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 else
     if [[ $DUMP == 1 ]]; then
         cmake -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
-	          -DMETIS_LIBRARIES="$HOME/Programs/METIS/lib/libmetis.a" \
-              -Dhybrid=$HYBRID -Dvec=$VEC -Ddump=$DUMP \
+              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
               -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
               . -G "Unix Makefiles"
     else
-	    cmake -Dhybrid=$HYBRID -Dvec=$VEC -Ddump=$DUMP \
+	    cmake -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
               -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
               . -G "Unix Makefiles"
     fi

@@ -4,7 +4,7 @@
 #ifdef STATS
     #include <fstream>
 #endif
-#include "globals.h"
+#include "DC_lib.h"
 
 // Create a nodal graph from a tetrahedron mesh (created from METIS)
 void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,

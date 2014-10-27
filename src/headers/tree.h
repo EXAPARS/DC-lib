@@ -4,7 +4,7 @@
 #ifdef STATS
     #include <fstream>
 #endif
-#include "globals.h"
+#include "DC_lib.h"
 
 // Compute the edge interval for each leaf of the D&C tree
 void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,

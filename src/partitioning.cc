@@ -2,14 +2,17 @@
 
 #include <string.h>
 #include <math.h>
-#include <metis.h>
 #include <cilk/cilk.h>
 #include <pthread.h>
+#include <metis.h>
 
 #include "tools.h"
 #include "permutations.h"
 #include "tree.h"
 #include "partitioning.h"
+
+extern tree_t *treeHead;
+extern int *elemPerm, *nodePerm;
 
 pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -123,21 +126,22 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     int *nodePart   = new int [nbSepNodes];
     mesh_to_nodal (graphIndex, graphValue, sepToNode, nbSepElem, dimElem, nbSepNodes);
     // Execution is correct without mutex although cilkscreen detects many race
-    // conditions. Check if the problem is solved with future version of METIS
+    // conditions. Check if the problem is solved with future version of METIS (5.0)
     pthread_mutex_lock (&metisMutex);
     METIS_PartGraphRecursive (&nbSepNodes, &constraint, graphIndex, graphValue,
-                              NULL, NULL, NULL, &nbSepPart, NULL, NULL, NULL,
-                              &objVal, nodePart);
+                              nullptr, nullptr, nullptr, &nbSepPart, nullptr, nullptr,
+                              nullptr, &objVal, nodePart);
     pthread_mutex_unlock (&metisMutex);
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    recursive_tree_creation (tree, elemToNode, sepToNode, nodePart, NULL, globalNbElem,
-                             dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, -1, -1
+    recursive_tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr,
+                             globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
+                             lastSepElem, -1, -1, 0
     #ifdef STATS
-                             , 0, dcFile, curNode, -1);
+                             , dcFile, curNode, -1);
     #else
-                             , 0);
+                             );
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
@@ -158,8 +162,8 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 	int *nodePart   = new int [nbNodes];
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue,
-                              NULL, NULL, NULL, &nbPart, NULL, NULL, NULL,
-                              &objVal, nodePart);
+                              nullptr, nullptr, nullptr, &nbPart, nullptr, nullptr,
+                              nullptr, &objVal, nodePart);
     delete[] graphValue, delete[] graphIndex;
 
 	// Initialize the global element permutation
@@ -178,20 +182,20 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
                           to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
     	ofstream dcFile (fileName, ios::out | ios::trunc);
     	init_dc_file (dcFile, nbPart);
-    	recursive_tree_creation (*treeHead, elemToNode, NULL, nodePart, nodePartSize,
-                                 nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0,
-                                 nbNodes-1, 0, dcFile, 0, -1);
+    	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+                                 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+                                 nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
     	close_dc_file (dcFile);
     	dc_stat ();
     #else
-    	recursive_tree_creation (*treeHead, elemToNode, NULL, nodePart, nodePartSize,
-                                 nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0,
-                                 nbNodes-1, 0);
+    	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+                                 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+                                 nbElem-1, 0, nbNodes-1, 0);
     #endif
     delete[] nodePartSize;
 
 	// Create node permutation from node partition
-	create_perm_array (nodePerm, nodePart, nbNodes, nbPart);
+	DC_create_permutation (nodePerm, nodePart, nbNodes, nbPart);
 	delete[] nodePart;
 
 	// C to Fortran elemToNode conversion

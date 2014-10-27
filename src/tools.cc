@@ -1,8 +1,9 @@
 #include <iostream>
-#include <cmath>
 #include <cilk/cilk.h>
 
 #include "tools.h"
+
+extern tree_t *treeHead;
 
 // Get CPU cycles
 uint64_t DC_get_cycles ()
@@ -67,8 +68,7 @@ void leaf_coloring_stat (ofstream &colorPerLeaf, int *elemPerColor, int *colorPa
 // Fill the elemToElem & the elemPerColor files
 void coloring_stat (int *elemPerColor, int nbElem)
 {
-	string fileName = "elemPerColor_" + meshName + "_" +
-               to_string ((long long)MAX_ELEM_PER_PART) + ".csv";
+	string fileName = "elemPerColor.csv";
 	ofstream elemColor (fileName, ios::out | ios::trunc);
 	elemColor << "colorSize nbElem\n";
 	for (int i = 0; i < MAX_ELEM_PER_PART; i++) {
@@ -80,7 +80,7 @@ void coloring_stat (int *elemPerColor, int nbElem)
 // Compute the number of elements per leaf of the D&C tree
 void leaf_dc_stat (tree_t &tree, ofstream &elemPerLeaf)
 {
-	if (tree.left == NULL && tree.right == NULL) {
+	if (tree.left == nullptr && tree.right == nullptr) {
 		static int curLeaf = 0;
 		elemPerLeaf << curLeaf << " " << tree.lastSep-tree.firstElem+1 << endl;
 		curLeaf++;
@@ -88,7 +88,7 @@ void leaf_dc_stat (tree_t &tree, ofstream &elemPerLeaf)
 	else {
 		leaf_dc_stat (*tree.left, elemPerLeaf);
 		leaf_dc_stat (*tree.right, elemPerLeaf);
-		if (tree.sep != NULL) {
+		if (tree.sep != nullptr) {
 			leaf_dc_stat (*tree.sep, elemPerLeaf);
 		}
 	}
@@ -97,8 +97,7 @@ void leaf_dc_stat (tree_t &tree, ofstream &elemPerLeaf)
 // Fill the elemPerLeaf file
 void dc_stat ()
 {
-	string fileName = "elemPerLeaf_" + meshName + "_" +
-                      to_string ((long long)MAX_ELEM_PER_PART) + ".csv";
+	string fileName = "elemPerLeaf.csv";
 	ofstream elemPerLeaf (fileName, ios::out | ios::trunc);
 	elemPerLeaf << "leafNb nbElem\n";
 	leaf_dc_stat (*treeHead, elemPerLeaf);
@@ -150,4 +149,63 @@ void init_dc_file (ofstream &dcFile, int nbPart)
 		   << "\\nMax elements per partition : " << MAX_ELEM_PER_PART
 		   << "\", shape=plaintext];\n"
 		   << "\tnode [shape=box, style=\"rounded,filled\"];\n";
+}
+
+/*****************************************************************************/
+/***********                       2D matrix                       ***********/
+/*****************************************************************************/
+
+// Determine for each tree node if it's a left, right or separator node
+void recursive_2d_matrix (tree_t &tree, int *checkNode, int *elemToNode, int dimElem,
+                          int LRS)
+{
+	if (tree.left == nullptr && tree.right == nullptr) {
+		for (int i = tree.firstElem; i <= tree.lastSep; i++) {
+			for (int j = 0; j < dimElem; j++) {
+				int node = elemToNode[i*dimElem+j] - 1;
+				checkNode[node] = LRS;
+			}
+		}
+	}
+	else {
+		if (LRS == 3) {
+			recursive_2d_matrix (*tree.left,  checkNode, elemToNode, dimElem, 3);
+			recursive_2d_matrix (*tree.right, checkNode, elemToNode, dimElem, 3);
+			if (tree.sep != nullptr) {
+				recursive_2d_matrix (*tree.sep,   checkNode, elemToNode, dimElem, 3);
+			}
+		}
+		else {
+			recursive_2d_matrix (*tree.left,  checkNode, elemToNode, dimElem, 1);
+			recursive_2d_matrix (*tree.right, checkNode, elemToNode, dimElem, 2);
+			if (tree.sep != nullptr) {
+				recursive_2d_matrix (*tree.sep,   checkNode, elemToNode, dimElem, 3);
+			}
+		}
+	}
+}
+
+// Create a 2D representation of a given CSR matrix
+void DC_create_2d_matrix (int *elemToNode, int *nodeToNodeRow, int *nodeToNodeColumn,
+                          int nbNodes, int dimElem)
+{
+	int *checkNode = new int [nbNodes] ();
+    string fileName = "2Dmatrix.csv";
+	recursive_2d_matrix (*treeHead, checkNode, elemToNode, dimElem, -1);
+	ofstream map (fileName, ios::out | ios::trunc);
+	map << "X,Y,color\n";
+
+	for (int i = 0; i < nbNodes; i++) {
+		for (int j = nodeToNodeRow[i]; j < nodeToNodeColumn[i+1]; j++) {
+			map << i << "," << nodeToNodeColumn[j]-1;
+			if     (checkNode[i] == 1 || checkNode[nodeToNodeColumn[j]-1] == 1)
+				map << ",1\n";
+			else if(checkNode[i] == 2 || checkNode[nodeToNodeColumn[j]-1] == 2)
+				map << ",2\n";
+			else if(checkNode[i] == 3 && checkNode[nodeToNodeColumn[j]-1] == 3)
+				map << ",3\n";
+		}
+	}
+
+	delete[] checkNode;
 }

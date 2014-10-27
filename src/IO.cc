@@ -1,5 +1,8 @@
 #include "IO.h"
 
+extern tree_t *treeHead;
+extern int *elemPerm, *nodePerm;
+
 // Read recursively each node of the D&C tree
 void recursive_reading (tree_t &tree, ifstream &treeFile)
 {
@@ -16,9 +19,9 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
     #endif
 	treeFile.read ((char*)&isLeaf, sizeof (bool));
 
-	tree.left  = NULL;
-	tree.right = NULL;
-	tree.sep   = NULL;
+	tree.left  = nullptr;
+	tree.right = nullptr;
+	tree.sep   = nullptr;
 
 	if (isLeaf == false) {
 		tree.left  = new tree_t;
@@ -30,26 +33,16 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
 		// Left, right & separator recursion
 		recursive_reading (*tree.left,  treeFile);
 		recursive_reading (*tree.right, treeFile);
-		if (tree.sep != NULL) {
+		if (tree.sep != nullptr) {
 			recursive_reading (*tree.sep, treeFile);
 		}
 	}
 }
 
 // Read the D&C tree and the permutation functions
-void DC_read_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
+void DC_read_tree (string &treePath, int nbElem, int nbNodes)
 {
-	string fileName = "../data" + meshName + "/DC_tree/" +
-    #ifdef HYBRID
-                      "Hybrid_" +
-    #else
-                      "DC_" +
-    #endif
-                      to_string ((long long)MAX_ELEM_PER_PART) + "_" +
-                      to_string ((long long)nbBlocks) + "_" +
-                      to_string ((long long)mpiRank);
-
-	ifstream treeFile (fileName, ios::in | ios::binary);
+	ifstream treeFile (treePath, ios::in | ios::binary);
 	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
 	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));
 	recursive_reading (*treeHead, treeFile);
@@ -69,7 +62,7 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
         treeFile.write ((char*)&tree.vecOffset, sizeof (int));
     #endif
 
-	if (tree.left == NULL && tree.right == NULL) {
+	if (tree.left == nullptr && tree.right == nullptr) {
 		isLeaf = true;
 		treeFile.write ((char*)&isLeaf, sizeof (bool));
 	}
@@ -80,26 +73,16 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
 		// Left, right & separator recursion
 		recursive_storing (*tree.left,  treeFile);
 		recursive_storing (*tree.right, treeFile);
-		if (tree.sep != NULL) {
+		if (tree.sep != nullptr) {
 			recursive_storing (*tree.sep, treeFile);
 		}
 	}
 }
 
 // Store the D&C tree and the permutation functions to a binary file
-void DC_store_tree (int nbElem, int nbNodes, int nbBlocks, int mpiRank)
+void DC_store_tree (string &treePath, int nbElem, int nbNodes)
 {
-    string fileName = "../data" + meshName + "/DC_tree/" +
-    #ifdef HYBRID
-                      "Hybrid_" +
-    #else
-                      "DC_" +
-    #endif
-                      to_string ((long long)MAX_ELEM_PER_PART) + "_" +
-                      to_string ((long long)nbBlocks) + "_" +
-                      to_string ((long long)mpiRank);
-
-    ofstream treeFile (fileName, ios::out | ios::trunc | ios::binary);
+    ofstream treeFile (treePath, ios::out | ios::trunc | ios::binary);
     treeFile.write ((char*)elemPerm, nbElem  * sizeof (int));
     treeFile.write ((char*)nodePerm, nbNodes * sizeof (int));
     recursive_storing (*treeHead, treeFile);

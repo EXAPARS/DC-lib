@@ -1,14 +1,18 @@
-#include <iostream>
 #include <cilk/cilk.h>
 #include <pthread.h>
 
 #include "tools.h"
+#include "coloring.h"
 #include "permutations.h"
 #include "partitioning.h"
 #include "tree.h"
 
-// The D&C tree is global in order to persist from one call to the library to another
-tree_t *treeHead = NULL;
+// The D&C tree and the permutations are global in order to persist from one call
+// to the library to another
+tree_t *treeHead = nullptr;
+int *elemPerm = nullptr, *nodePerm = nullptr;
+
+#ifdef TREE_CREATION
 
 // Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -18,7 +22,7 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
                              int nbNodes)
 {
     // If current node is a leaf
-    if (tree.left == NULL && tree.right == NULL) {
+    if (tree.left == nullptr && tree.right == nullptr) {
         // Get the first and last edges of the leaf
         int firstNode = tree.firstCSR, lastNode = tree.lastCSR;
         tree.firstCSR = nodeToNodeRow[firstNode];
@@ -52,9 +56,9 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
     tree.firstCSR  = firstNode;
     tree.lastCSR   = lastNode;
     tree.vecOffset = 0;
-	tree.left   = NULL;
-	tree.right  = NULL;
-	tree.sep    = NULL;
+	tree.left   = nullptr;
+	tree.right  = nullptr;
+	tree.sep    = nullptr;
 
 	if (isLeaf == false) {
   		tree.left  = new tree_t;
@@ -120,7 +124,7 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
 
 	// Create local element partition & count left & separator elements
 	int *localElemPart = new int [localNbElem];
-	if (sepToNode == NULL) {
+	if (sepToNode == nullptr) {
         create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, dimElem,
                           separator, firstElem, &nbLeftElem, &nbSepElem);
 	}
@@ -130,7 +134,7 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
 	}
 
     // Count the left nodes if this not a separator
-    if (nodePartSize != NULL) {
+    if (nodePartSize != nullptr) {
         for (int i = firstPart; i <= separator; i++) {
             nbLeftNodes += nodePartSize[i];
         }
@@ -138,7 +142,7 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
 
 	// Create local element permutation
 	int *localElemPerm = new int [localNbElem];
-	create_perm_array (localElemPerm, localElemPart, localNbElem, 3);
+	DC_create_permutation (localElemPerm, localElemPart, localNbElem, 3);
 	delete[] localElemPart;
 
     // Execution is correct without mutex although cilkscreen detects a race condition
@@ -149,10 +153,11 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
     pthread_mutex_unlock (&mergeMutex);
 
 	// Permute elemToNode and sepToNode with local element permutation
-	permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem, firstElem);
-	if (sepToNode != NULL) {
-		permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
-                              sepOffset);
+	DC_permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem,
+                             firstElem);
+	if (sepToNode != nullptr) {
+		DC_permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
+                                 sepOffset);
 	}
 	delete[] localElemPerm;
 
@@ -211,3 +216,5 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     	coloring (elemToNode, nbElem, dimElem, nbNodes);
     #endif
 }
+
+#endif
