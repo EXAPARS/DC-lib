@@ -1,16 +1,20 @@
 #!/bin/bash
 
+# Libraries path
+METIS_PATH=$HOME/Programs/METIS
+METIS_INCLUDE=$METIS_PATH/include
+METIS_LIBRARIES=$METIS_PATH/lib/libmetis.a
+
 # Case insensitive comparisons
 shopt -s nocasematch
 
-# Options
+# Parse arguments
 HYBRID=0
-DUMP=0
 ARCHI=0
+TREE=0
 STATS=0
 DEBUG=0
 VERBOSE=0
-
 for i in $@; do
 	if [[ $i == "clean" ]]; then
 	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
@@ -25,13 +29,13 @@ for i in $@; do
     elif [[ $i == "hybrid" ]]; then
         HYBRID=1
     elif [[ $i == "sse" ]]; then
-        ARCHI="sse"
+        ARCHI=SSE
     elif [[ $i == "avx" ]]; then
-        ARCHI="avx"
+        ARCHI=AVX
     elif [[ $i == "mic" ]]; then
-        ARCHI="mic"
-	elif [[ $i == "dump" ]]; then
-		DUMP=1
+        ARCHI=MIC
+	elif [[ $i == "tree" ]]; then
+		TREE=1
 	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
 		STATS=1
 	elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
@@ -43,6 +47,7 @@ for i in $@; do
 	fi
 done
 
+# Check arguments
 if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
@@ -57,29 +62,28 @@ if [[ $ARCHI == "mic" ]]; then
 	export MPI_C=mpiicc
 	export MPI_CXX=mpiicpc
 
-    if [[ $DUMP == 1 ]]; then
+    if [[ $TREE == 1 ]]; then
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-	          -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
-              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
-              -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
+	          -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
-              -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
+	          -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 else
-    if [[ $DUMP == 1 ]]; then
-        cmake -DMETIS_INCLUDE_PATH="$HOME/Programs/METIS/include" \
-              -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
-              -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
+    if [[ $TREE == 1 ]]; then
+        cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
-	    cmake -Dhybrid=$HYBRID -Darchi=$ARCHI -Ddump=$DUMP \
-              -Dstats=$STATS -Ddebug=$DEBUG -Dverbose=$VERBOSE \
+	    cmake -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 fi
 
+# Compile
 make -j 2
