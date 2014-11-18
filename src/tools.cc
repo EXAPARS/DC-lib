@@ -47,11 +47,17 @@ void quick_sort (couple_t *tab, int begin, int end)
             }
             else break;
         }
-
-        cilk_spawn
-        quick_sort (tab, begin, right);
-        quick_sort (tab, right+1, end);
-        cilk_sync;
+        #ifdef OMP
+            #pragma omp task
+            quick_sort (tab, begin, right);
+            quick_sort (tab, right+1, end);
+            #pragma taskwait
+        #else
+            cilk_spawn
+            quick_sort (tab, begin, right);
+            quick_sort (tab, right+1, end);
+            cilk_sync;
+        #endif
     }
 }
 

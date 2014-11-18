@@ -166,8 +166,13 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
 void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
 	// Fortran to C elemToNode conversion
-    cilk_for (int i = 0; i < nbElem * dimElem; i++) {
-        elemToNode[i]--;
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbElem * dimElem; i++) {
+    #else    
+        cilk_for (int i = 0; i < nbElem * dimElem; i++) {
+    #endif    
+    elemToNode[i]--;
     }
 
     // Configure METIS & compute the node partitioning of the mesh
@@ -183,7 +188,12 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     delete[] graphValue, delete[] graphIndex;
 
 	// Initialize the global element permutation
-	cilk_for (int i = 0; i < nbElem; i++) {
+    #ifdef OMP
+        #pragma omp parallel for
+    	for (int i = 0; i < nbElem; i++) {
+    #else
+    	cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
 		elemPerm[i] = i;
 	}
     // Compute the number of nodes per partition
@@ -215,8 +225,13 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 	delete[] nodePart;
 
 	// C to Fortran elemToNode conversion
-	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
-		elemToNode[i]++;
+    #ifdef OMP
+        #pragma omp parallel for
+	    for (int i = 0; i < nbElem * dimElem; i++) {
+    #else
+    	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
+    #endif	
+	elemToNode[i]++;
 	}
 }
 

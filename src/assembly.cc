@@ -49,14 +49,22 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
     }
     else {
         // Left & right recursion
-        cilk_spawn
-        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.left);
-        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.right);
-
-        // Synchronization
-        cilk_sync;
+        #ifdef OMP
+            #pragma omp task
+            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.left);
+            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.right);
+            #pragma omp taskwait
+        #else
+            cilk_spawn
+            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.left);
+            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.right);
+            // Synchronization
+            cilk_sync;
+        #endif
 
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
