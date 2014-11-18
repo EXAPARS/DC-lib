@@ -51,7 +51,7 @@ void quick_sort (couple_t *tab, int begin, int end)
             #pragma omp task
             quick_sort (tab, begin, right);
             quick_sort (tab, right+1, end);
-            #pragma taskwait
+            #pragma omp taskwait
         #else
             cilk_spawn
             quick_sort (tab, begin, right);
