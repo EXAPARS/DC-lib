@@ -47,8 +47,11 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
     else {
         // Left & right recursion
         #ifdef OMP
-            #pragma omp task
-            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+            #pragma omp task default (shared)
+            {
+//                printf("OMP TASK - COMPUTE EDGE INTERVAL\n");
+                compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+            }
             compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
             #pragma omp taskwait
         #else
@@ -193,16 +196,19 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
 	// Left & right recursion
 	
     #ifdef OMP
-	    #pragma omp task
-        recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
-                                 globalNbElem, dimElem, firstPart, separator, firstElem,
-                                 firstElem+nbLeftElem-1, firstNode,
-                                 firstNode+nbLeftNodes-1, sepOffset
-        #ifdef STATS
+	    #pragma omp task default(shared)
+        {
+//            printf("OMP TASK - TREE CREATION\n");
+            recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
+                                     globalNbElem, dimElem, firstPart, separator, firstElem,
+                                     firstElem+nbLeftElem-1, firstNode,
+                                     firstNode+nbLeftNodes-1, sepOffset
+            #ifdef STATS
         					     , dcFile, 3*curNode+1, 1);
-        #else
+            #else
                                  );
-        #endif
+            #endif
+        }
 	    recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
                                  nodePartSize, globalNbElem, dimElem, separator+1,
                                  lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,

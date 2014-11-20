@@ -193,14 +193,21 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 	}
 	else {
         #ifdef OMP
-            #pragma omp task
+            #pragma omp task default (shared)
+            {
 #ifdef STATS
+//            printf("OMP TASK - LEAVES COLORING\n");
             leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
                              colorPerLeaf, globalNbElem, dimElem);
+            }
+
             leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
                              colorPerLeaf, globalNbElem, dimElem);
 #else
+//            printf("OMP TASK - LEAVES COLORING\n");
             leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
+            }
+
             leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
             #pragma omp taskwait

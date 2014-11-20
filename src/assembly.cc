@@ -50,9 +50,12 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
     else {
         // Left & right recursion
         #ifdef OMP
-            #pragma omp task
-            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+            #pragma omp task default(shared)
+            {
+//                printf("omp task : operatorDim = %d\n", operatorDim);
+                recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                                 operatorDim, *tree.left);
+            }
             recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                                 operatorDim, *tree.right);
             #pragma omp taskwait

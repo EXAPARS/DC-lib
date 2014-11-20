@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <cilk/cilk.h>
+#include <stdio.h>
 
 #include "tools.h"
 
@@ -48,8 +49,11 @@ void quick_sort (couple_t *tab, int begin, int end)
             else break;
         }
         #ifdef OMP
-            #pragma omp task
-            quick_sort (tab, begin, right);
+            #pragma omp task default (shared)
+            {
+//                printf("OMP TASK - quick_sort\n");
+                quick_sort (tab, begin, right);
+            }
             quick_sort (tab, right+1, end);
             #pragma omp taskwait
         #else
