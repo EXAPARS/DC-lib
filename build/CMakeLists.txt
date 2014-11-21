@@ -36,10 +36,6 @@ if (${VERBOSE})
     set (CMAKE_VERBOSE_MAKEFILE 1)
     set (flags "${flags} -vec-report6")
 endif (${VERBOSE})
-if (${OMP})
-    set (flags "${flags} -openmp")
-    add_definitions (-DOMP)
-endif (${OMP})
 set (CMAKE_CXX_FLAGS "${flags} -std=c++11")
 
 # Headers
@@ -65,14 +61,6 @@ endif (${STATS})
 if (${DEBUG})
 	set (lib ${lib}_Debug)
 endif (${DEBUG})
-if (${CILK})
-    set (lib ${lib}_Cilk)
-endif (${CILK})
-if (${OMP})
-    set (lib ${lib}_OpenMP)
-endif (${OMP})
-
-
 add_library (
 	${lib}
     SHARED
