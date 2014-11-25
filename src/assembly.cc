@@ -16,7 +16,7 @@
 
 #include <cilk/cilk.h>
 #include <stdlib.h>
-
+#include <omp.h>
 #include "assembly.h"
 
 extern tree_t *treeHead;
@@ -26,6 +26,8 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
                          void (*userVecFct) (void *, int, int), void *userArgs,
                          double *nodeToNodeValue, int operatorDim, tree_t &tree)
 {
+//    printf("THREAD : %d\n", omp_get_thread_num());
+
     // If current node is a leaf, call the appropriate assembly function
     if (tree.left == nullptr && tree.right == nullptr) {
 
@@ -52,13 +54,24 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
         #ifdef OMP
             #pragma omp task default(shared)
             {
-//                printf("omp task : operatorDim = %d\n", operatorDim);
                 recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.left);
+                                        operatorDim, *tree.left);
             }
-            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+
+            #pragma omp task default(shared)
+            {
+
+                recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                                 operatorDim, *tree.right);
+            }
+
             #pragma omp taskwait
+            {
+                if (tree.sep != nullptr) {
+                    recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                        operatorDim, *tree.sep);
+                }
+            }
         #else
             cilk_spawn
             recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
@@ -67,13 +80,14 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
                                 operatorDim, *tree.right);
             // Synchronization
             cilk_sync;
-        #endif
 
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
             recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                                 operatorDim, *tree.sep);
         }
+        #endif
+
     }
 }
 
@@ -83,6 +97,20 @@ void DC_assembly (void (*userSeqFct) (void *, int, int),
                   void (*userVecFct) (void *, int, int),
                   void *userArgs, double *nodeToNodeValue, int operatorDim)
 {
-    recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
-                        *treeHead);
+    #ifdef OMP
+    {
+        #pragma omp parallel
+        {
+            #pragma omp single nowait
+            {
+                printf ("OMP TASK ASSEMBLY\n");
+                recursive_assembly (userSeqFct, userVecFct, userArgs, 
+                                    nodeToNodeValue, operatorDim, *treeHead);
+            }
+        }
+    }
+    #else
+        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, 
+                            operatorDim, *treeHead);
+    #endif
 }

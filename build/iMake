@@ -17,6 +17,7 @@ DEBUG=0
 VERBOSE=0
 OPENMP=0
 CILK=0
+REF=0
 
 for i in $@; do
 	if [[ $i == "clean" ]]; then
@@ -49,6 +50,8 @@ for i in $@; do
         OPENMP=1
     elif [[ $i == "cilk" ]]; then
         CILK=1
+    elif [[ $i == "ref" ]]; then
+        REF=1
 	else
 		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
 	fi
@@ -85,12 +88,13 @@ if [[ $ARCHI == "mic" ]]; then
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
               -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              -DOMP=$OPENMP -DCILK=$CILK \
+              -DOMP=$OPENMP -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     else
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DOMP=$OPENMP -DCILK=$CILK \
+              -DREF=$REF \
               . -G "Unix Makefiles"
     fi
 else
@@ -98,10 +102,12 @@ else
         cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
               -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DOMP=$OPENMP -DCILK=$CILK \
+              -DREF=$REF \
               . -G "Unix Makefiles"
     else
         cmake -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DOMP=$OPENMP -DCILK=$CILK \
+              -DREF=$REF \
               . -G "Unix Makefiles"
     fi
 fi

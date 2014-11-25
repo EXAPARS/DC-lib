@@ -53,8 +53,9 @@ file (GLOB_RECURSE source_list ../src/* ../include/*)
 
 # Library
 set (lib DC)
-if (${HYBRID})
-	set (lib ${lib}_Hybrid_${ARCHI})
+
+if (${HYBRID})    
+   	set (lib ${lib}_Hybrid_${ARCHI})
 endif (${HYBRID})
 if (${TREE})
 	set (lib ${lib}_TreeCreation)
@@ -66,11 +67,16 @@ if (${DEBUG})
 	set (lib ${lib}_Debug)
 endif (${DEBUG})
 if (${CILK})
-    set (lib ${lib}_Cilk)
+    if (${REF})
+        # do nothing ... ! 
+    else (${REF})
+        set (lib ${lib}_Cilk)
+    endif (${REF})
 endif (${CILK})
 if (${OMP})
     set (lib ${lib}_OpenMP)
 endif (${OMP})
+
 add_library (
 	${lib}
     SHARED
