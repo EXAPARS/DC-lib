@@ -194,7 +194,7 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 
 	// Create D&C tree & its dot file
     #ifdef STATS
-        string fileName = "dcTree_" + meshName + "_" +
+        string fileName = "dcTree_" +
                           to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
     	ofstream dcFile (fileName, ios::out | ios::trunc);
     	init_dc_file (dcFile, nbPart);

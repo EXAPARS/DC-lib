@@ -20,7 +20,7 @@
 #include "DC.h"
 
 #define NB_BLOCKS 32
-#define BLOCK_SIZE sizeof (int)
+#define BLOCK_SIZE 32
 #define MAX_COLOR (NB_BLOCKS * BLOCK_SIZE)
 
 // Create element to element array from element to node and node to element

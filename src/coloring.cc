@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <cilk/cilk.h>
+#include <string.h>
 
 #include "tools.h"
 #include "permutations.h"
@@ -105,22 +106,25 @@ int create_bounded_color_part (int *colorPart, int *colorCard, list_t *elemToEle
 
     // For each element of local interval
     for (int i = 0; i < nbElem; i++) {
-        int neighborColor[NB_BLOCKS] = {0}, color = 0, mask = 1, block = 0;
+        int neighborsColor[NB_BLOCKS] = {0}, color = 0, mask = 1, block = 0;
 
         // Get the color of all neigbor elements
         for (int j = 0; j < elemToElem[i].size; j++) {
-            int neighbor = elemToElem[i].list[j];
-            neighborColor[colorPart[neighbor] / BLOCK_SIZE] |=
-                 mask << (colorPart[neighbor] % BLOCK_SIZE);
+            int neighborColor = colorPart[elemToElem[i].list[j]];
+            // If neighbor is initialized
+            if (neighborColor != -1) {
+                neighborsColor[neighborColor / BLOCK_SIZE] |=
+                      mask << (neighborColor % BLOCK_SIZE);
+            }
         }
         // Get the first free color (position of the first 0 bit)
-        while (neighborColor[block] & mask || colorCard[color] >= VEC_SIZE) {
-            neighborColor[block] = neighborColor[block] >> 1;
+        while (neighborsColor[block] & mask || colorCard[color] >= VEC_SIZE) {
+            neighborsColor[block] = neighborsColor[block] >> 1;
             color++;
             if (color % BLOCK_SIZE == 0) block++;
         }
         if (color >= MAX_COLOR) {
-            cerr << "Error: Not enough colors !\n";
+            cerr << "Error: Not enough colors!\n";
             exit (EXIT_FAILURE);
         }
         // Assign the first free color to current element
@@ -151,8 +155,9 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
                               tree.lastSep, dimElem);
 
 		// Assign a color to each element of the leaf
-		int *colorPart = new int [localNbElem] ();
+		int *colorPart = new int [localNbElem];
         int colorCard[MAX_COLOR] = {0};
+        memset (colorPart, -1, localNbElem * sizeof (int));
     	nbColors = create_bounded_color_part (colorPart, colorCard, elemToElem,
                                               localNbElem);
         delete[] elemToElem;
@@ -213,7 +218,7 @@ void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     DC_create_nodeToElem (nodeToElem, elemToNode, nbElem, dimElem, nbNodes);
 
     #ifdef STATS
-        string fileName = "colorPerLeaf_" + meshName + "_" +
+        string fileName = "colorPerLeaf_" +
                           to_string ((long long)MAX_ELEM_PER_PART) + ".csv";
         ofstream colorPerLeaf (fileName, ios::out | ios::trunc);
         colorPerLeaf << "leafNb nbColors\n";
