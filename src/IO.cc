@@ -14,6 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License along with
     the D&C library. If not, see <http://www.gnu.org/licenses/>. */
 
+#include <iostream>
 #include "IO.h"
 
 extern tree_t *treeHead;
@@ -64,6 +65,10 @@ void DC_read_tree (string &treePath, int nbElem, int nbNodes)
     nodePerm = new int [nbNodes];
 
 	ifstream treeFile (treePath, ios::in | ios::binary);
+    if (!treeFile.is_open ()) {
+        cerr << "Error: cannot read DC tree & permutations!\n";
+        exit (EXIT_FAILURE);
+    }
 	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
 	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));
 	recursive_reading (*treeHead, treeFile);
@@ -104,6 +109,10 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
 void DC_store_tree (string &treePath, int nbElem, int nbNodes)
 {
     ofstream treeFile (treePath, ios::out | ios::trunc | ios::binary);
+    if (!treeFile.is_open ()) {
+        cerr << "Error: cannot store DC tree & permutations!\n";
+        exit (EXIT_FAILURE);
+    }
     treeFile.write ((char*)elemPerm, nbElem  * sizeof (int));
     treeFile.write ((char*)nodePerm, nbNodes * sizeof (int));
     recursive_storing (*treeHead, treeFile);
