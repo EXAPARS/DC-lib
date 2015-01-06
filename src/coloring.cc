@@ -90,7 +90,13 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
             couple[i*dimElem+j].node = elemToNode[i*dimElem+j] - 1;
         }
     }
-    quick_sort (couple, 0, nbElem * dimElem - 1);
+    #ifdef OMP
+        #pragma omp parallel
+            #pragma omp single nowait
+                quick_sort (couple, 0, nbElem * dimElem - 1);
+    #else
+                quick_sort (couple, 0, nbElem * dimElem - 1);
+    #endif
 
     int ctr = 0;
     for (int i = 0; i < nbNodes; i++) {
@@ -193,22 +199,19 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 	}
 	else {
         #ifdef OMP
-            #pragma omp task default (shared)
-            {
 #ifdef STATS
-//            printf("OMP TASK - LEAVES COLORING\n");
-            leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
-                             colorPerLeaf, globalNbElem, dimElem);
-            }
-
-            leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
-                             colorPerLeaf, globalNbElem, dimElem);
+            #pragma omp task default (shared)            
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);            
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);
 #else
-//            printf("OMP TASK - LEAVES COLORING\n");
-            leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
-            }
-
-            leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
+            
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
             #pragma omp taskwait
         #else
@@ -232,8 +235,8 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 #else
             leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
-		}
-	}
+		} // tree.sep
+	} // else
 }
 
 // Coloring of the D&C tree
@@ -256,6 +259,10 @@ void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         coloring_stat (elemPerColor, nbElem);
         delete[] elemPerColor;
         colorPerLeaf.close ();
+    #elif OMP
+        #pragma omp parallel
+            #pragma omp single nowait
+                leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #else
         leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #endif

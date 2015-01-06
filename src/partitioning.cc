@@ -214,9 +214,23 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     	close_dc_file (dcFile);
     	dc_stat ();
     #else
-    	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-                                 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-                                 nbElem-1, 0, nbNodes-1, 0);
+		#ifdef OMP
+		{
+			#pragma omp parallel
+			{
+				#pragma omp single nowait
+				{
+					recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+											nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+											nbElem-1, 0, nbNodes-1, 0);
+				}
+			}
+		}
+		#else
+			recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+										nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+										nbElem-1, 0, nbNodes-1, 0);
+		#endif	
     #endif
     delete[] nodePartSize;
 

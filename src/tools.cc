@@ -51,10 +51,12 @@ void quick_sort (couple_t *tab, int begin, int end)
         #ifdef OMP
             #pragma omp task default (shared)
             {
-//                printf("OMP TASK - quick_sort\n");
                 quick_sort (tab, begin, right);
             }
-            quick_sort (tab, right+1, end);
+            #pragma omp task default (shared)
+            {
+                quick_sort (tab, right+1, end);
+            }
             #pragma omp taskwait
         #else
             cilk_spawn
