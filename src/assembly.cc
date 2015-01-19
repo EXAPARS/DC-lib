@@ -51,9 +51,9 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
         // Left & right recursion
         cilk_spawn
         recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.left);
-        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                             operatorDim, *tree.right);
+        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *tree.left);
 
         // Synchronization
         cilk_sync;
