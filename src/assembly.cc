@@ -26,24 +26,7 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
                          void (*userVecFct) (void *, int, int), void *userArgs,
                          double *nodeToNodeValue, int operatorDim, tree_t &tree)
 {
-    /* 
-    #ifdef OMP
-    // PRINT !
-    printf("\nOmp_get_level %d\n", omp_get_level());
-    printf("Omp_get_active_level %d\n", omp_get_active_level());
-    printf("Omp_get_num_thread %d\n", omp_get_thread_num());
-    printf("Omp_get_team_num %d\n", omp_get_team_num());
-    printf("Omp_get_team_size %d\n", omp_get_team_size(omp_get_level()));
-    printf("Omp_get_nested %d\n", omp_get_nested());
-    printf("Omp_get_max_active_levels %d\n", omp_get_max_active_levels());
     
-    omp_sched_t kind;
-    int modifier;
-    omp_get_schedule(&kind, &modifier);
-    printf("The default schedule is %d, chunk size is %d\n", kind, modifier);
-    #endif
-    */
-
     // If current node is a leaf, call the appropriate assembly function
     if (tree.left == nullptr && tree.right == nullptr) {
 
