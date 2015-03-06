@@ -17,16 +17,16 @@
 #include <cilk/cilk.h>
 #include <stdlib.h>
 
-#include "assembly.h"
+#include "tree_traversal.h"
 
 extern tree_t *treeHead;
 
-// Follow the D&C tree to execute the assembly step in parallel
-void recursive_assembly (void (*userSeqFct) (void *, int, int),
-                         void (*userVecFct) (void *, int, int), void *userArgs,
-                         double *nodeToNodeValue, int operatorDim, tree_t &tree)
+// Follow the D&C tree to execute the given function in parallel
+void tree_traversal (void (*userSeqFct) (void *, int, int),
+                     void (*userVecFct) (void *, int, int), void *userArgs,
+                     double *nodeToNodeValue, int operatorDim, tree_t &tree)
 {
-    // If current node is a leaf, call the appropriate assembly function
+    // If current node is a leaf, call the appropriate function
     if (tree.left == nullptr && tree.right == nullptr) {
 
         // If leaf is not a separator, reset locally the CSR matrix
@@ -50,28 +50,27 @@ void recursive_assembly (void (*userSeqFct) (void *, int, int),
     else {
         // Left & right recursion
         cilk_spawn
-        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.right);
-        recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.left);
+        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                        operatorDim, *tree.right);
+        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                        operatorDim, *tree.left);
 
         // Synchronization
         cilk_sync;
 
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
-            recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.sep);
+            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *tree.sep);
         }
     }
 }
 
-// Wrapper used to get the root of the D&C tree before calling the real assembly
-// function
-void DC_assembly (void (*userSeqFct) (void *, int, int),
-                  void (*userVecFct) (void *, int, int),
-                  void *userArgs, double *nodeToNodeValue, int operatorDim)
+// Wrapper used to get the root of the D&C tree before calling the real tree traversal
+void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
+                        void (*userVecFct) (void *, int, int),
+                        void *userArgs, double *nodeToNodeValue, int operatorDim)
 {
-    recursive_assembly (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
-                        *treeHead);
+    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                    *treeHead);
 }

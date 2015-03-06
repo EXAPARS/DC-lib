@@ -21,7 +21,7 @@
 #include "coloring.h"
 #include "permutations.h"
 #include "partitioning.h"
-#include "tree.h"
+#include "tree_creation.h"
 
 // The D&C tree and the permutations are global in order to persist from one call
 // to the library to another
