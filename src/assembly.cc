@@ -101,12 +101,8 @@ void DC_assembly (void (*userSeqFct) (void *, int, int),
         #pragma omp parallel
         {
             #pragma omp single nowait
-<<<<<<< HEAD
-            {
-=======
->>>>>>> 775ebf198ddb2dfcf2d55b9349bfc9c66776630b
-                recursive_assembly (userSeqFct, userVecFct, userArgs, 
-                                    nodeToNodeValue, operatorDim, *treeHead);
+            recursive_assembly (userSeqFct, userVecFct, userArgs, 
+                                nodeToNodeValue, operatorDim, *treeHead);
         }
     }
     #else
