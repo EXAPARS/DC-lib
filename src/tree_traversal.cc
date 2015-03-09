@@ -16,6 +16,7 @@
 
 #include <cilk/cilk.h>
 #include <stdlib.h>
+#include <omp.h>
 
 #include "tree_traversal.h"
 
@@ -48,21 +49,44 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
         #endif
     }
     else {
-        // Left & right recursion
-        cilk_spawn
-        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                        operatorDim, *tree.right);
-        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                        operatorDim, *tree.left);
+        #ifdef OMP
+            // Left & right recursion
+            #pragma omp task default(shared)
+            {
+                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.right);
+            }
+            #pragma omp task default(shared)
+            {
+                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.left);
+            }
 
-        // Synchronization
-        cilk_sync;
-
-        // Separator recursion, if it is not empty
-        if (tree.sep != nullptr) {
+            // Synchronization
+            #pragma omp taskwait
+            {
+                if (tree.sep != nullptr) {
+                    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                    operatorDim, *tree.sep);
+                }
+            }
+        #else
+            cilk_spawn
             tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.sep);
-        }
+                            operatorDim, *tree.right);
+            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *tree.left);
+
+            // Synchronization
+            cilk_sync;
+
+            // Separator recursion, if it is not empty
+            if (tree.sep != nullptr) {
+                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.sep);
+            }
+        #endif
+
     }
 }
 
@@ -71,6 +95,17 @@ void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
                         void (*userVecFct) (void *, int, int),
                         void *userArgs, double *nodeToNodeValue, int operatorDim)
 {
-    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
-                    *treeHead);
+    #ifdef OMP
+    {
+        #pragma omp parallel
+        {
+            #pragma omp single nowait
+            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *treeHead);
+        }
+    }
+    #else
+        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                        *treeHead);
+    #endif
 }

@@ -45,12 +45,23 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
     }
     else {
         // Left & right recursion
-        cilk_spawn
-        compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
-        compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
-
-        // Synchronization
-        cilk_sync;
+        #ifdef OMP
+            #pragma omp task default (shared)
+            {
+                compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+            }
+            #pragma omp task default (shared)
+            {
+                compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
+            }
+            #pragma omp taskwait
+        #else
+            cilk_spawn
+            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
+            // Synchronization
+            cilk_sync;
+        #endif
     }
 }
 
@@ -58,7 +69,19 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
 // for CSR reset
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int nbNodes)
 {
-    compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode, nbNodes);
+    #ifdef OMP
+    {
+        #pragma omp parallel
+        {
+            #pragma omp single nowait
+            {
+                compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode, nbNodes);
+            }
+        }
+    }
+    #else
+        compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode, nbNodes);
+    #endif
 }
 
 // Initialize a node of the D&C tree
@@ -185,28 +208,59 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
     #endif
 
 	// Left & right recursion
-	cilk_spawn
-	recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
-                             globalNbElem, dimElem, firstPart, separator, firstElem,
-                             firstElem+nbLeftElem-1, firstNode,
-                             firstNode+nbLeftNodes-1, sepOffset
-    #ifdef STATS
-    					     , dcFile, 3*curNode+1, 1);
+	
+    #ifdef OMP
+    {
+	    #pragma omp task default(shared)
+        {
+            recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
+                                     globalNbElem, dimElem, firstPart, separator, firstElem,
+                                     firstElem+nbLeftElem-1, firstNode,
+                                     firstNode+nbLeftNodes-1, sepOffset
+            #ifdef STATS
+									, dcFile, 3*curNode+1, 1);
+            #else
+									);
+            #endif
+        }
+	    #pragma omp task default(shared)
+        {              
+			recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
+									nodePartSize, globalNbElem, dimElem, separator+1,
+									lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
+									firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
+			#ifdef STATS
+									, dcFile, 3*curNode+2, 2);
+			#else
+									);
+			#endif
+		}
+        #pragma omp taskwait
+    }
     #else
-                             );
-    #endif
-	recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
-                             nodePartSize, globalNbElem, dimElem, separator+1,
-                             lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
-                             firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
-    #ifdef STATS
-                             , dcFile, 3*curNode+2, 2);
-    #else
-                             );
+        cilk_spawn
+	    recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
+                                 globalNbElem, dimElem, firstPart, separator, firstElem,
+                                 firstElem+nbLeftElem-1, firstNode,
+                                 firstNode+nbLeftNodes-1, sepOffset
+        #ifdef STATS
+        					     , dcFile, 3*curNode+1, 1);
+        #else
+                                 );
+        #endif
+	    recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
+                                 nodePartSize, globalNbElem, dimElem, separator+1,
+                                 lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
+                                 firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
+        #ifdef STATS
+                                 , dcFile, 3*curNode+2, 2);
+        #else
+                                 );
+        #endif
+	    cilk_sync;
     #endif
 
 	// D&C partitioning of separator elements
-	cilk_sync;
 	if (nbSepElem > 0) {
 		sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem,
         #ifdef STATS

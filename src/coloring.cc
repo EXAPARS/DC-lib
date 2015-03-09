@@ -35,38 +35,43 @@ void DC_create_elemToElem (list_t *elemToElem, index_t &nodeToElem, int *elemToN
                            int firstElem, int lastElem, int dimElem)
 {
 	// For each node of given element interval
-    cilk_for (int i = firstElem; i <= lastElem; i++) {
-        int nbNeighbors = 0;
-        for (int j = 0; j < dimElem; j++) {
-			int node = elemToNode[i*dimElem+j] - 1;
-			// For each neighbor element of current node
-            for (int k = nodeToElem.index[node];
-                     k < nodeToElem.index[node+1]; k++) {
-                int elemNeighbor = nodeToElem.value[k];
-				// If neighbor element is in the element interval and is not
-                // current element
-                if (elemNeighbor >= firstElem && elemNeighbor <= lastElem &&
-                    elemNeighbor != i) {
-                    bool isNew = true;
-					// If neighbor element is not already stored
-                    for (int l = 0; l < nbNeighbors; l++) {
-                        if ((elemNeighbor - firstElem) ==
-                            elemToElem[i-firstElem].list[l]) {
-							isNew = false;
-                            break;
-						}
-					}
-					// If neighbor is not in the list, add it
-                    if (isNew) {
-                       	elemToElem[i-firstElem].list[nbNeighbors] =
-                            elemNeighbor - firstElem;
-                        nbNeighbors++;
-					}
-				}
-			}
-		}
-        elemToElem[i-firstElem].size = nbNeighbors;
-	}
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = firstElem; i <= lastElem; i++) {
+    #else
+        cilk_for (int i = firstElem; i <= lastElem; i++) {
+    #endif
+            int nbNeighbors = 0;
+            for (int j = 0; j < dimElem; j++) {
+			    int node = elemToNode[i*dimElem+j] - 1;
+			    // For each neighbor element of current node
+                for (int k = nodeToElem.index[node];
+                         k < nodeToElem.index[node+1]; k++) {
+                    int elemNeighbor = nodeToElem.value[k];
+				    // If neighbor element is in the element interval and is not
+                    // current element
+                    if (elemNeighbor >= firstElem && elemNeighbor <= lastElem &&
+                        elemNeighbor != i) {
+                        bool isNew = true;
+					    // If neighbor element is not already stored
+                        for (int l = 0; l < nbNeighbors; l++) {
+                            if ((elemNeighbor - firstElem) ==
+                                elemToElem[i-firstElem].list[l]) {
+							    isNew = false;
+                                break;
+						    }   
+					    }   
+					    // If neighbor is not in the list, add it
+                        if (isNew) {
+                           	elemToElem[i-firstElem].list[nbNeighbors] =
+                                elemNeighbor - firstElem;
+                            nbNeighbors++;
+			    		}
+				    }
+    			}   
+	    	}
+            elemToElem[i-firstElem].size = nbNeighbors;
+    	}
 }
 
 // Create node to element structure from element to node
@@ -74,13 +79,25 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
                           int dimElem, int nbNodes)
 {
     couple_t *couple = new couple_t [nbElem * dimElem];
-    cilk_for (int i = 0; i < nbElem; i++) {
+    
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbElem; i++) {
+    #else
+        cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
         for (int j = 0; j < dimElem; j++) {
             couple[i*dimElem+j].elem = i;
             couple[i*dimElem+j].node = elemToNode[i*dimElem+j] - 1;
         }
     }
-    quick_sort (couple, 0, nbElem * dimElem - 1);
+    #ifdef OMP
+        #pragma omp parallel
+            #pragma omp single nowait
+                quick_sort (couple, 0, nbElem * dimElem - 1);
+    #else
+                quick_sort (couple, 0, nbElem * dimElem - 1);
+    #endif
 
     int ctr = 0;
     for (int i = 0; i < nbNodes; i++) {
@@ -186,6 +203,23 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 		delete[] colorPerm;
 	}
 	else {
+        #ifdef OMP
+#ifdef STATS
+            #pragma omp task default (shared)            
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);            
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);
+#else
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
+            
+            #pragma omp task default (shared)
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
+#endif
+            #pragma omp taskwait
+        #else
 		cilk_spawn
 #ifdef STATS
 		leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
@@ -197,6 +231,8 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 		leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
 		cilk_sync;
+        #endif
+
 		if (tree.sep != nullptr) {
 #ifdef STATS
 			leaves_coloring (*tree.sep, nodeToElem, elemToNode, elemPerColor,
@@ -204,8 +240,8 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 #else
             leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem, dimElem);
 #endif
-		}
-	}
+		} // tree.sep
+	} // else
 }
 
 // Coloring of the D&C tree
@@ -228,11 +264,15 @@ void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         coloring_stat (elemPerColor, nbElem);
         delete[] elemPerColor;
         colorPerLeaf.close ();
+    #elif OMP
+        #pragma omp parallel
+            #pragma omp single nowait
+                leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #else
         leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #endif
 
     delete[] nodeToElem.value, delete[] nodeToElem.index;
 }
-
 #endif
+

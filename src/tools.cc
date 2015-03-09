@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <cilk/cilk.h>
+#include <stdio.h>
 
 #include "tools.h"
 
@@ -47,11 +48,22 @@ void quick_sort (couple_t *tab, int begin, int end)
             }
             else break;
         }
-
-        cilk_spawn
-        quick_sort (tab, begin, right);
-        quick_sort (tab, right+1, end);
-        cilk_sync;
+        #ifdef OMP
+            #pragma omp task default (shared)
+            {
+                quick_sort (tab, begin, right);
+            }
+            #pragma omp task default (shared)
+            {
+                quick_sort (tab, right+1, end);
+            }
+            #pragma omp taskwait
+        #else
+            cilk_spawn
+            quick_sort (tab, begin, right);
+            quick_sort (tab, right+1, end);
+            cilk_sync;
+        #endif
     }
 }
 

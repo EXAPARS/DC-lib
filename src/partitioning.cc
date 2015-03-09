@@ -166,8 +166,13 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
 void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
 	// Fortran to C elemToNode conversion
-    cilk_for (int i = 0; i < nbElem * dimElem; i++) {
-        elemToNode[i]--;
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbElem * dimElem; i++) {
+    #else    
+        cilk_for (int i = 0; i < nbElem * dimElem; i++) {
+    #endif    
+    elemToNode[i]--;
     }
 
     // Configure METIS & compute the node partitioning of the mesh
@@ -183,7 +188,12 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     delete[] graphValue, delete[] graphIndex;
 
 	// Initialize the global element permutation
-	cilk_for (int i = 0; i < nbElem; i++) {
+    #ifdef OMP
+        #pragma omp parallel for
+    	for (int i = 0; i < nbElem; i++) {
+    #else
+    	cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
 		elemPerm[i] = i;
 	}
     // Compute the number of nodes per partition
@@ -204,9 +214,23 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     	close_dc_file (dcFile);
     	dc_stat ();
     #else
-    	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-                                 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-                                 nbElem-1, 0, nbNodes-1, 0);
+		#ifdef OMP
+		{
+			#pragma omp parallel
+			{
+				#pragma omp single nowait
+				{
+					recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+											nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+											nbElem-1, 0, nbNodes-1, 0);
+				}
+			}
+		}
+		#else
+			recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+										nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+										nbElem-1, 0, nbNodes-1, 0);
+		#endif	
     #endif
     delete[] nodePartSize;
 
@@ -215,8 +239,13 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 	delete[] nodePart;
 
 	// C to Fortran elemToNode conversion
-	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
-		elemToNode[i]++;
+    #ifdef OMP
+        #pragma omp parallel for
+	    for (int i = 0; i < nbElem * dimElem; i++) {
+    #else
+    	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
+    #endif	
+	elemToNode[i]++;
 	}
 }
 
