@@ -40,9 +40,8 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
     // If current node is a leaf
     if (tree.left == nullptr && tree.right == nullptr) {
         // Get the first and last edges of the leaf
-        int firstNode = tree.firstCSR, lastNode = tree.lastCSR;
-        tree.firstCSR = nodeToNodeRow[firstNode];
-        tree.lastCSR  = nodeToNodeRow[lastNode+1] - 1;
+        tree.firstEdge = nodeToNodeRow[tree.firstNode];
+        tree.lastEdge  = nodeToNodeRow[tree.lastNode+1] - 1;
     }
     else {
         // Left & right recursion
@@ -69,12 +68,14 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 	tree.firstElem = firstElem;
 	tree.lastElem  = lastElem - nbSepElem;
 	tree.lastSep   = lastElem;
-    tree.firstCSR  = firstNode;
-    tree.lastCSR   = lastNode;
+    tree.firstNode = firstNode;
+    tree.lastNode  = lastNode;
+    tree.firstEdge = -1;
+    tree.lastEdge  = -1;
     tree.vecOffset = 0;
-	tree.left   = nullptr;
-	tree.right  = nullptr;
-	tree.sep    = nullptr;
+	tree.left      = nullptr;
+	tree.right     = nullptr;
+	tree.sep       = nullptr;
 
 	if (isLeaf == false) {
   		tree.left  = new tree_t;

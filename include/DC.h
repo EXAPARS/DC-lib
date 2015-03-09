@@ -10,7 +10,8 @@
 // D&C tree structure
 typedef struct tree_s {
     int firstElem, lastElem, lastSep;
-    int firstCSR, lastCSR;
+    int firstNode, lastNode;
+    int firstEdge, lastEdge;
     int vecOffset;
     struct tree_s *left, *right, *sep;
 } tree_t;
@@ -29,11 +30,10 @@ typedef struct {
 // Get CPU cycles
 uint64_t DC_get_cycles ();
 
-// Wrapper used to get the root of the D&C tree before calling the real assembly
-// function
-void DC_assembly (void (*userSeqFct) (void *, int, int),
-                  void (*userVecFct) (void *, int, int),
-                  void *userArgs, double *nodeToNodeValue, int operatorDim);
+// Wrapper used to get the root of the D&C tree before calling the real tree traversal
+void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
+                        void (*userVecFct) (void *, int, int),
+                        void *userArgs, double *nodeToNodeValue, int operatorDim);
 
 // Create element to element array from element to node and node to element
 // Two elements are neighbors if they share a node

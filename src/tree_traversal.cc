@@ -30,10 +30,10 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
     if (tree.left == nullptr && tree.right == nullptr) {
 
         // If leaf is not a separator, reset locally the CSR matrix
-        if (tree.firstCSR != -1) {
-            int firstCSR = tree.firstCSR * operatorDim;
-            int lastCSR  = (tree.lastCSR + 1) * operatorDim - firstCSR;
-            nodeToNodeValue[firstCSR:lastCSR] = 0;
+        if (tree.firstEdge != -1) {
+            int firstEdge = tree.firstEdge * operatorDim;
+            int lastEdge  = (tree.lastEdge + 1) * operatorDim - firstEdge;
+            nodeToNodeValue[firstEdge:lastEdge] = 0;
         }
 
         #ifdef HYBRID

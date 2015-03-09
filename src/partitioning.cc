@@ -24,7 +24,7 @@
 
 #include "tools.h"
 #include "permutations.h"
-#include "tree.h"
+#include "tree_creation.h"
 #include "partitioning.h"
 
 extern tree_t *treeHead;
