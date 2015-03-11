@@ -1,18 +1,18 @@
 /*  Copyright 2014 - UVSQ
     Authors list: Loïc Thébault, Eric Petit
 
-    This file is part of the D&C library.
+    This file is part of the DC-lib.
 
-    D&C library is free software: you can redistribute it and/or modify it under the
+    DC-lib is free software: you can redistribute it and/or modify it under the
     terms of the GNU Lesser General Public License as published by the Free Software
     Foundation, either version 3 of the License, or (at your option) any later version.
 
-    D&C library is distributed in the hope that it will be useful, but WITHOUT ANY
+    DC-lib is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
     PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License along with
-    the D&C library. If not, see <http://www.gnu.org/licenses/>. */
+    the DC-lib. If not, see <http://www.gnu.org/licenses/>. */
 
 #ifndef TOOLS_H
 #define TOOLS_H
@@ -24,6 +24,9 @@ using namespace std;
 
 // Get CPU cycles
 uint64_t DC_get_cycles ();
+
+// Get time of day
+double DC_get_time ();
 
 // Sort by ascending node values couple arrays using parallel quick sort
 void quick_sort (couple_t *tab, int begin, int end);
