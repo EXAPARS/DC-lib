@@ -3,75 +3,85 @@
 # Libraries path
 METIS_PATH=$HOME/Programs/METIS
 METIS_INCLUDE=$METIS_PATH/include
-METIS_LIBRARIES=$METIS_PATH/lib/libmetis.a
 
 # Case insensitive comparisons
 shopt -s nocasematch
 
+# Check number of arguments
+if [ $# -eq 0 ]; then
+    echo -e "\\033[1;31mPlease specify:"
+    echo -e " - The distributed memory library (MPI or GASPI)"
+    echo -e " - The shared memory runtime (Cilk or OpenMP) \\033[0;39m"
+    exit
+fi
+
 # Parse arguments
+DISTRI=0
+SHARED=0
 HYBRID=0
 ARCHI=0
 TREE=0
 STATS=0
 DEBUG=0
 VERBOSE=0
-OPENMP=0
-CILK=0
-REF=0
 
 for i in $@; do
 	if [[ $i == "clean" ]]; then
 	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
               external_files.mod mod_qvddump.mod 2> /dev/null
-		echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
-		exit
+	    echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
+	    exit
 	elif [[ $i == "mrproper" ]]; then
 	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../lib/* \
               external_files.mod mod_qvddump.mod 2> /dev/null
-		echo -e "\\033[1;32mBuild & lib directories have been cleaned up\\033[0;39m"
-		exit
+	    echo -e "\\033[1;32mBuild & lib directories have been cleaned up\\033[0;39m"
+	    exit
+    elif [[ $i == "mpi" ]]; then
+        DISTRI="XMPI"
+    elif [[ $i == "gaspi" ]]; then
+        DISTRI="GASPI"
+    elif [[ $i == "cilk" ]]; then
+        SHARED="CILK"
+    elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
+        SHARED="OMP"
     elif [[ $i == "hybrid" ]]; then
         HYBRID=1
     elif [[ $i == "sse" ]]; then
-        ARCHI=SSE
+        ARCHI="SSE"
     elif [[ $i == "avx" ]]; then
-        ARCHI=AVX
+        ARCHI="AVX"
     elif [[ $i == "mic" ]]; then
-        ARCHI=MIC
-	elif [[ $i == "tree" ]]; then
-		TREE=1
-	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
-		STATS=1
-	elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
-		DEBUG=1
-	elif [[ $i == "verbose" ]]; then
-		VERBOSE=1
-    elif [[ $i == "omp" ]] || [[ $i == "openmp" ]]; then
-        OPENMP=1
-    elif [[ $i == "cilk" ]]; then
-        CILK=1
-    elif [[ $i == "ref" ]]; then
-        REF=1
-	else
-		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
-	fi
+        ARCHI="MIC"
+    elif [[ $i == "tree" ]]; then
+        TREE=1
+    elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
+        STATS=1
+    elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
+        DEBUG=1
+    elif [[ $i == "verbose" ]]; then
+        VERBOSE=1
+    else
+   	    echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
+    fi
 done
 
 # Check arguments
+if [[ $DISTRI != "xmpi" ]] && [[ $DISTRI != "gaspi" ]]; then
+    echo -e "\\033[1;31mPlease specify the distributed memory library (MPI or GASPI) \
+             \\033[0;39m"
+    exit
+fi
+if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
+    echo -e "\\033[1;31mPlease specify the shared memory runtime (Cilk or OpenMP) \
+             \\033[0;39m"
+    exit
+fi
 if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
-
-# Obligation to choose between Cilk and OpenMP
-if [[ $OPENMP == 1 ]] && [[ $CILK == 1 ]]; then
-    echo -e "\\033[1;31mPlease choose between Cilk and OpenMP.\\033[0;39m"
-    exit
-fi
-# Obligation to specify Cilk or OpenMP
-if [[ $OPENMP == 0 ]] && [[ $CILK == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify the multithreading library (Cilk or OpenMP).\
-             \\033[0;39m"
+if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
+    echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
 
@@ -86,28 +96,25 @@ if [[ $ARCHI == "mic" ]]; then
 
     if [[ $TREE == 1 ]]; then
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
-              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              -DOMP=$OPENMP -DCILK=$CILK -DREF=$REF \
+              -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
+              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DOMP=$OPENMP -DCILK=$CILK \
-              -DREF=$REF \
+              -DDISTRI=$DISTRI -DSHARED=$SHARED -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 else
     if [[ $TREE == 1 ]]; then
-        cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DHYBRID=$HYBRID -DARCHI=$ARCHI \
-              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              -DOMP=$OPENMP -DCILK=$CILK \
-              -DREF=$REF \
+        cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
+              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
-        cmake -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DOMP=$OPENMP -DCILK=$CILK \
-              -DREF=$REF \
+        cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 fi
