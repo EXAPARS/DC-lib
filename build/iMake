@@ -97,7 +97,7 @@ if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     exit
 fi
 if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
-    echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
+    echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
     exit
 fi
 

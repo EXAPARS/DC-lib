@@ -17,6 +17,7 @@
 #include <iostream>
 #include <cilk/cilk.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #include "tools.h"
 
