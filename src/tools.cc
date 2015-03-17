@@ -14,8 +14,10 @@
     You should have received a copy of the GNU Lesser General Public License along with
     the DC-lib. If not, see <http://www.gnu.org/licenses/>. */
 
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 #include <iostream>
-#include <cilk/cilk.h>
 #include <stdio.h>
 #include <sys/time.h>
 
@@ -59,15 +61,11 @@ void quick_sort (couple_t *tab, int begin, int end)
         }
         #ifdef OMP
             #pragma omp task default (shared)
-            {
-                quick_sort (tab, begin, right);
-            }
+            quick_sort (tab, begin, right);
             #pragma omp task default (shared)
-            {
-                quick_sort (tab, right+1, end);
-            }
+            quick_sort (tab, right+1, end);
             #pragma omp taskwait
-        #else
+        #elif CILK
             cilk_spawn
             quick_sort (tab, begin, right);
             quick_sort (tab, right+1, end);

@@ -32,6 +32,8 @@ void DC_create_elemToElem (list_t *elemToElem, index_t &nodeToElem, int *elemToN
 void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
                           int dimElem, int nbNodes);
 
+#ifdef DC_HYBRID
+
 // Assign a color to the elements of a given leaf following the bounded colors strategy
 // & return the number of colors
 int create_bounded_color_part (int *colorPart, int *colorCard, list_t *elemToElem,
@@ -47,4 +49,5 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 // Coloring of the D&C tree
 void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes);
 
+#endif
 #endif

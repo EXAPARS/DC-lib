@@ -18,7 +18,9 @@
 
 #include <string.h>
 #include <math.h>
-#include <cilk/cilk.h>
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 #include <pthread.h>
 #include <metis.h>
 
@@ -124,9 +126,9 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
         init_dc_tree (tree, firstSepElem, lastSepElem, 0, -1, -1, true);
-#ifdef STATS
-        fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3);
-#endif
+        #ifdef STATS
+            fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3);
+        #endif
         return;
     }
 
@@ -169,10 +171,10 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     #ifdef OMP
         #pragma omp parallel for
         for (int i = 0; i < nbElem * dimElem; i++) {
-    #else    
+    #elif CILK
         cilk_for (int i = 0; i < nbElem * dimElem; i++) {
     #endif    
-    elemToNode[i]--;
+        elemToNode[i]--;
     }
 
     // Configure METIS & compute the node partitioning of the mesh
@@ -191,7 +193,7 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     #ifdef OMP
         #pragma omp parallel for
     	for (int i = 0; i < nbElem; i++) {
-    #else
+    #elif CILK
     	cilk_for (int i = 0; i < nbElem; i++) {
     #endif
 		elemPerm[i] = i;
@@ -204,10 +206,13 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 
 	// Create D&C tree & its dot file
     #ifdef STATS
-        string fileName = "dcTree_" +
-                          to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
+        string fileName = "dcTree_"+to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
     	ofstream dcFile (fileName, ios::out | ios::trunc);
     	init_dc_file (dcFile, nbPart);
+		#ifdef OMP
+			#pragma omp parallel
+			#pragma omp single nowait
+        #endif
     	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
                                  nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
                                  nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
@@ -215,22 +220,12 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     	dc_stat ();
     #else
 		#ifdef OMP
-		{
 			#pragma omp parallel
-			{
-				#pragma omp single nowait
-				{
-					recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-											nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-											nbElem-1, 0, nbNodes-1, 0);
-				}
-			}
-		}
-		#else
-			recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-										nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-										nbElem-1, 0, nbNodes-1, 0);
-		#endif	
+			#pragma omp single nowait
+        #endif
+        recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+        						 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+        						 nbElem-1, 0, nbNodes-1, 0);
     #endif
     delete[] nodePartSize;
 
@@ -242,10 +237,10 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     #ifdef OMP
         #pragma omp parallel for
 	    for (int i = 0; i < nbElem * dimElem; i++) {
-    #else
+    #elif CILK
     	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
     #endif	
-	elemToNode[i]++;
+	    elemToNode[i]++;
 	}
 }
 

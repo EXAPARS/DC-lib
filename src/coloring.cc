@@ -14,8 +14,10 @@
     You should have received a copy of the GNU Lesser General Public License along with
     the DC-lib. If not, see <http://www.gnu.org/licenses/>. */
 
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 #include <iostream>
-#include <cilk/cilk.h>
 #include <string.h>
 
 #include "tools.h"
@@ -38,40 +40,39 @@ void DC_create_elemToElem (list_t *elemToElem, index_t &nodeToElem, int *elemToN
     #ifdef OMP
         #pragma omp parallel for
         for (int i = firstElem; i <= lastElem; i++) {
-    #else
+    #elif CILK
         cilk_for (int i = firstElem; i <= lastElem; i++) {
     #endif
-            int nbNeighbors = 0;
-            for (int j = 0; j < dimElem; j++) {
-			    int node = elemToNode[i*dimElem+j] - 1;
-			    // For each neighbor element of current node
-                for (int k = nodeToElem.index[node];
-                         k < nodeToElem.index[node+1]; k++) {
-                    int elemNeighbor = nodeToElem.value[k];
-				    // If neighbor element is in the element interval and is not
-                    // current element
-                    if (elemNeighbor >= firstElem && elemNeighbor <= lastElem &&
-                        elemNeighbor != i) {
-                        bool isNew = true;
-					    // If neighbor element is not already stored
-                        for (int l = 0; l < nbNeighbors; l++) {
-                            if ((elemNeighbor - firstElem) ==
-                                elemToElem[i-firstElem].list[l]) {
-							    isNew = false;
-                                break;
-						    }   
+        int nbNeighbors = 0;
+        for (int j = 0; j < dimElem; j++) {
+		    int node = elemToNode[i*dimElem+j] - 1;
+		    // For each neighbor element of current node
+            for (int k = nodeToElem.index[node]; k < nodeToElem.index[node+1]; k++) {
+                int elemNeighbor = nodeToElem.value[k];
+			    // If neighbor element is in the element interval and is not
+                // current element
+                if (elemNeighbor >= firstElem && elemNeighbor <= lastElem &&
+                    elemNeighbor != i) {
+                    bool isNew = true;
+				    // If neighbor element is not already stored
+                    for (int l = 0; l < nbNeighbors; l++) {
+                        if ((elemNeighbor - firstElem) ==
+                            elemToElem[i-firstElem].list[l]) {
+						    isNew = false;
+                            break;
 					    }   
-					    // If neighbor is not in the list, add it
-                        if (isNew) {
-                           	elemToElem[i-firstElem].list[nbNeighbors] =
-                                elemNeighbor - firstElem;
-                            nbNeighbors++;
-			    		}
-				    }
-    			}   
-	    	}
-            elemToElem[i-firstElem].size = nbNeighbors;
-    	}
+				    }   
+				    // If neighbor is not in the list, add it
+                    if (isNew) {
+                       	elemToElem[i-firstElem].list[nbNeighbors] =
+                            elemNeighbor - firstElem;
+                        nbNeighbors++;
+		    		}
+			    }
+    		}   
+		}
+        elemToElem[i-firstElem].size = nbNeighbors;
+    }
 }
 
 // Create node to element structure from element to node
@@ -83,7 +84,7 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
     #ifdef OMP
         #pragma omp parallel for
         for (int i = 0; i < nbElem; i++) {
-    #else
+    #elif CILK
         cilk_for (int i = 0; i < nbElem; i++) {
     #endif
         for (int j = 0; j < dimElem; j++) {
@@ -93,11 +94,9 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
     }
     #ifdef OMP
         #pragma omp parallel
-            #pragma omp single nowait
-                quick_sort (couple, 0, nbElem * dimElem - 1);
-    #else
-                quick_sort (couple, 0, nbElem * dimElem - 1);
+        #pragma omp single nowait
     #endif
+    quick_sort (couple, 0, nbElem * dimElem - 1);
 
     int ctr = 0;
     for (int i = 0; i < nbNodes; i++) {
@@ -112,7 +111,7 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
     delete[] couple;
 }
 
-#ifdef HYBRID
+#ifdef DC_HYBRID
 
 // Assign a color to the elements of a given leaf following the bounded colors strategy
 // & return the number of colors
@@ -179,13 +178,13 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
                                               localNbElem);
         delete[] elemToElem;
 
-#ifdef STATS
-		// Compute statistics on the coloring of the leaf
-        pthread_mutex_lock (&statMutex);
-		leaf_coloring_stat (colorPerLeaf, elemPerColor, colorPart, localNbElem,
-                            nbColors);
-        pthread_mutex_unlock (&statMutex);
-#endif
+        #ifdef STATS
+		    // Compute statistics on the coloring of the leaf
+            pthread_mutex_lock (&statMutex);
+		    leaf_coloring_stat (colorPerLeaf, elemPerColor, colorPart, localNbElem,
+                                nbColors);
+            pthread_mutex_unlock (&statMutex);
+        #endif
 
 		// Create a local permutation on the elements of the leaf & get the index
         // of the last element in a full vectorial color
@@ -204,44 +203,48 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 	}
 	else {
         #ifdef OMP
-#ifdef STATS
-            #pragma omp task default (shared)            
+            #ifdef STATS
+                #pragma omp task default (shared)            
                 leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
                                  colorPerLeaf, globalNbElem, dimElem);            
-            #pragma omp task default (shared)
+                #pragma omp task default (shared)
                 leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
                                  colorPerLeaf, globalNbElem, dimElem);
-#else
-            #pragma omp task default (shared)
-                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
-            
-            #pragma omp task default (shared)
-                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
-#endif
+            #else
+                #pragma omp task default (shared)
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+                #pragma omp task default (shared)
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+            #endif
             #pragma omp taskwait
         #else
-		cilk_spawn
-#ifdef STATS
-		leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
-						 colorPerLeaf, globalNbElem, dimElem);
-		leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
-						 colorPerLeaf, globalNbElem, dimElem);
-#else
-		leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem, dimElem);
-		leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem, dimElem);
-#endif
-		cilk_sync;
+		    cilk_spawn
+            #ifdef STATS
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
+                				 colorPerLeaf, globalNbElem, dimElem);
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
+                				 colorPerLeaf, globalNbElem, dimElem);
+            #else
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+            #endif
+            cilk_sync;
         #endif
 
 		if (tree.sep != nullptr) {
-#ifdef STATS
-			leaves_coloring (*tree.sep, nodeToElem, elemToNode, elemPerColor,
-							 colorPerLeaf, globalNbElem, dimElem);
-#else
-            leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem, dimElem);
-#endif
-		} // tree.sep
-	} // else
+            #ifdef STATS
+			    leaves_coloring (*tree.sep, nodeToElem, elemToNode, elemPerColor,
+			    				 colorPerLeaf, globalNbElem, dimElem);
+            #else
+                leaves_coloring (*tree.sep, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+            #endif
+		}
+	}
 }
 
 // Coloring of the D&C tree
@@ -259,20 +262,24 @@ void coloring (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         ofstream colorPerLeaf (fileName, ios::out | ios::trunc);
         colorPerLeaf << "leafNb nbColors\n";
         int *elemPerColor = new int [MAX_ELEM_PER_PART] ();
-        leaves_coloring (*treeHead, nodeToElem, elemToNode, elemPerColor, colorPerLeaf,
-                         nbElem, dimElem);
+        #ifdef OMP
+            #pragma omp parallel
+            #pragma omp single nowait
+        #endif
+        leaves_coloring (*treeHead, nodeToElem, elemToNode, elemPerColor,
+                         colorPerLeaf, nbElem, dimElem);
         coloring_stat (elemPerColor, nbElem);
         delete[] elemPerColor;
         colorPerLeaf.close ();
-    #elif OMP
-        #pragma omp parallel
-            #pragma omp single nowait
-                leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #else
+        #ifdef OMP
+            #pragma omp parallel
+            #pragma omp single nowait
+        #endif
         leaves_coloring (*treeHead, nodeToElem, elemToNode, nbElem, dimElem);
     #endif
 
     delete[] nodeToElem.value, delete[] nodeToElem.index;
 }
-#endif
 
+#endif

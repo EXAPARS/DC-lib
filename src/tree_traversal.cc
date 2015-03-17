@@ -14,9 +14,10 @@
     You should have received a copy of the GNU Lesser General Public License along with
     the DC-lib. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <cilk/cilk.h>
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 #include <stdlib.h>
-#include <omp.h>
 
 #include "tree_traversal.h"
 
@@ -37,7 +38,7 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
             nodeToNodeValue[firstEdge:lastEdge] = 0;
         }
 
-        #ifdef HYBRID
+        #ifdef DC_HYBRID
             // Call user vectorial function on full colors
             userVecFct (userArgs, tree.firstElem, tree.vecOffset);
 
@@ -52,25 +53,22 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default(shared)
-            {
-                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.right);
-            }
+            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *tree.right);
             #pragma omp task default(shared)
-            {
-                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.left);
-            }
+            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                            operatorDim, *tree.left);
 
             // Synchronization
             #pragma omp taskwait
-            {
-                if (tree.sep != nullptr) {
-                    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                    operatorDim, *tree.sep);
-                }
+
+            // Separator recursion, if it is not empty
+            if (tree.sep != nullptr) {
+                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
+                                operatorDim, *tree.sep);
             }
-        #else
+        #elif CILK
+            // Left & right recursion
             cilk_spawn
             tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
                             operatorDim, *tree.right);
@@ -86,7 +84,6 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
                                 operatorDim, *tree.sep);
             }
         #endif
-
     }
 }
 
@@ -96,16 +93,9 @@ void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
                         void *userArgs, double *nodeToNodeValue, int operatorDim)
 {
     #ifdef OMP
-    {
         #pragma omp parallel
-        {
-            #pragma omp single nowait
-            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *treeHead);
-        }
-    }
-    #else
-        tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
-                        *treeHead);
+        #pragma omp single nowait
     #endif
+    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
+                    *treeHead);
 }
