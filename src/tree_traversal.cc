@@ -32,7 +32,7 @@ void tree_traversal (void (*userSeqFct) (void *, int, int),
     if (tree.left == nullptr && tree.right == nullptr) {
 
         // If leaf is not a separator, reset locally the CSR matrix
-        if (tree.firstEdge != -1) {
+        if (tree.firstEdge != -1 && nodeToNodeValue != nullptr) {
             int firstEdge = tree.firstEdge * operatorDim;
             int lastEdge  = (tree.lastEdge + 1) * operatorDim - firstEdge;
             nodeToNodeValue[firstEdge:lastEdge] = 0;
