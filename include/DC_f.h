@@ -28,10 +28,8 @@ extern "C" {
 
     // Wrapper used to get the root of the D&C tree before calling the real tree
     // traversal
-    void dc_tree_traversal_ (void (*userSeqFct) (void *, int, int),
-                             void (*userVecFct) (void *, int, int),
-                             void *userArgs, double *nodeToNodeValue,
-                             int *operatorDim);
+    void dc_tree_traversal_ (void (*userSeqFct) (void *, DCargs_t *),
+                             void (*userVecFct) (void *, DCargs_t *), void *userArgs);
 
     // Permute "tab" 2D array of double using node permutation
     void dc_permute_double_2d_array_ (double *tab, int *nbItem, int *dimItem);

@@ -32,6 +32,14 @@ typedef struct tree_s {
     struct tree_s *left, *right, *sep;
 } tree_t;
 
+// D&C arguments structure
+typedef struct DCargs_s {
+    int firstElem, lastElem;
+    int firstNode, lastNode;
+    int firstEdge, lastEdge;
+    int isSep;
+} DCargs_t;
+
 typedef struct {
     int *index, *value;
 } index_t;
@@ -50,9 +58,8 @@ uint64_t DC_get_cycles ();
 double DC_get_time ();
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
-                        void (*userVecFct) (void *, int, int),
-                        void *userArgs, double *nodeToNodeValue, int operatorDim);
+void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
+                        void (*userVecFct) (void *, DCargs_t *), void *userArgs);
 
 // Create element to element array from element to node and node to element
 // Two elements are neighbors if they share a node

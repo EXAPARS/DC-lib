@@ -20,13 +20,12 @@
 #include "DC.h"
 
 // Follow the D&C tree to execute the given function in parallel
-void tree_traversal (void (*userSeqFct) (void *, int, int),
-                     void (*userVecFct) (void *, int, int), void *userArgs,
-                     double *nodeToNodeValue, int operatorDim, tree_t &tree);
+void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
+                     void (*userVecFct) (void *, DCargs_t *),
+                     void *userArgs, tree_t &tree);
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
-                        void (*userVecFct) (void *, int, int),
-                        void *userArgs, double *nodeToNodeValue, int operatorDim);
+void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
+                        void (*userVecFct) (void *, DCargs_t *), void *userArgs);
 
 #endif

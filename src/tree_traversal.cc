@@ -24,78 +24,78 @@
 extern tree_t *treeHead;
 
 // Follow the D&C tree to execute the given function in parallel
-void tree_traversal (void (*userSeqFct) (void *, int, int),
-                     void (*userVecFct) (void *, int, int), void *userArgs,
-                     double *nodeToNodeValue, int operatorDim, tree_t &tree)
+void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
+                     void (*userVecFct) (void *, DCargs_t *),
+                     void *userArgs, tree_t &tree)
 {
     // If current node is a leaf, call the appropriate function
     if (tree.left == nullptr && tree.right == nullptr) {
 
-        // If leaf is not a separator, reset locally the CSR matrix
-        if (tree.firstEdge != -1 && nodeToNodeValue != nullptr) {
-            int firstEdge = tree.firstEdge * operatorDim;
-            int lastEdge  = (tree.lastEdge + 1) * operatorDim - firstEdge;
-            nodeToNodeValue[firstEdge:lastEdge] = 0;
-        }
+        // Initialize the D&C arguments
+        DCargs_t DCargs;
+        DCargs.firstNode = tree.firstNode;
+        DCargs.lastNode  = tree.lastNode;
+        DCargs.firstEdge = tree.firstEdge;
+        DCargs.lastEdge  = tree.lastEdge;
+        if (tree.firstEdge == -1) DCargs.isSep = 1;
+        else                      DCargs.isSep = 0;
 
         #ifdef DC_HYBRID
             // Call user vectorial function on full colors
-            userVecFct (userArgs, tree.firstElem, tree.vecOffset);
+            DCargs.firstElem = tree.firstElem;
+            DCargs.lastElem  = tree.vecOffset;
+            userVecFct (userArgs, &DCargs);
 
             // Call user sequential function on other colors
-            userSeqFct (userArgs, tree.vecOffset+1, tree.lastElem);
+            DCargs.firstElem = tree.vecOffset+1;
+            DCargs.lastElem  = tree.lastElem;
+            userSeqFct (userArgs, &DCargs);
         #else
             // Call user sequential function
-            userSeqFct (userArgs, tree.firstElem, tree.lastElem);
+            DCargs.firstElem = tree.firstElem;
+            DCargs.lastElem  = tree.lastElem;
+            userSeqFct (userArgs, &DCargs);
         #endif
     }
     else {
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default(shared)
-            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.right);
+            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
             #pragma omp task default(shared)
-            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.left);
+            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
 
             // Synchronization
             #pragma omp taskwait
 
             // Separator recursion, if it is not empty
             if (tree.sep != nullptr) {
-                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.sep);
+                tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
             }
         #elif CILK
             // Left & right recursion
             cilk_spawn
-            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.right);
-            tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                            operatorDim, *tree.left);
+            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
+            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
 
             // Synchronization
             cilk_sync;
 
             // Separator recursion, if it is not empty
             if (tree.sep != nullptr) {
-                tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue,
-                                operatorDim, *tree.sep);
+                tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
             }
         #endif
     }
 }
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void DC_tree_traversal (void (*userSeqFct) (void *, int, int),
-                        void (*userVecFct) (void *, int, int),
-                        void *userArgs, double *nodeToNodeValue, int operatorDim)
+void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
+                        void (*userVecFct) (void *, DCargs_t *), void *userArgs)
 {
     #ifdef OMP
         #pragma omp parallel
         #pragma omp single nowait
     #endif
-    tree_traversal (userSeqFct, userVecFct, userArgs, nodeToNodeValue, operatorDim,
-                    *treeHead);
+    tree_traversal (userSeqFct, userVecFct, userArgs, *treeHead);
 }
