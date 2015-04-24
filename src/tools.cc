@@ -30,7 +30,7 @@ extern tree_t *treeHead;
 /*****************************************************************************/
 
 // Get time of day
-inline double DC_get_time ()
+double DC_get_time ()
 {
     struct timeval tv;
     gettimeofday (&tv, NULL);
@@ -38,7 +38,7 @@ inline double DC_get_time ()
 }
 
 // RDTSC
-inline uint64_t DC_get_cycles ()
+uint64_t DC_get_cycles ()
 {
     uint64_t a, d;
     __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
