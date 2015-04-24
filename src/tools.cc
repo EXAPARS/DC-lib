@@ -50,20 +50,20 @@ DC_timer::DC_timer () : avgTime (0), timeCtr (0), avgCycles (0), cyclesCtr (0)
 {}
 
 // Return the average time of day
-inline double DC_timer::get_avg_time ()
+double DC_timer::get_avg_time ()
 {
     return avgTime;
 }
 
 // Reset the average time of day
-inline void DC_timer::time_reset ()
+void DC_timer::reset_time ()
 {
     avgTime = 0;
     timeCtr = 0;
 }
 
 // Stop time of day timer
-inline void DC_timer::time_stop ()
+void DC_timer::stop_time ()
 {
     double stopTime = DC_get_time ();
     avgTime = timeCtr * avgTime + (stopTime - startTime);
@@ -72,26 +72,26 @@ inline void DC_timer::time_stop ()
 }
 
 // Start time of day timer
-inline void DC_timer::time_start ()
+void DC_timer::start_time ()
 {
     startTime = DC_get_time ();
 }
 
 // Return the average cycle counter
-inline uint64_t DC_timer::get_avg_cycles ()
+uint64_t DC_timer::get_avg_cycles ()
 {
     return avgCycles;
 }
 
 // Reset the average cycles counter
-inline void DC_timer::cycles_reset ()
+void DC_timer::reset_cycles ()
 {
     avgCycles = 0;
     cyclesCtr = 0;
 }
 
 // Stop cycle counter
-inline void DC_timer::cycles_stop ()
+void DC_timer::stop_cycles ()
 {
     uint64_t stopCycles = DC_get_cycles ();
     avgCycles = cyclesCtr * avgCycles + (stopCycles - startCycles);
@@ -100,7 +100,7 @@ inline void DC_timer::cycles_stop ()
 }
 
 // Start cycle counter
-inline void DC_timer::cycles_start ()
+void DC_timer::start_cycles ()
 {
     startCycles = DC_get_cycles ();
 }

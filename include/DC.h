@@ -60,15 +60,15 @@ class DC_timer
 
         // Get time of day
         double get_avg_time ();
-        void time_reset ();
-        void time_stop ();
-        void time_start ();
+        void reset_time ();
+        void stop_time ();
+        void start_time ();
 
         // RDTSC
         uint64_t get_avg_cycles ();
-        void cycles_reset ();
-        void cycles_stop ();
-        void cycles_start ();
+        void reset_cycles ();
+        void stop_cycles ();
+        void start_cycles ();
 
     private:
         // Get time of day
