@@ -20,11 +20,11 @@
 #include "DC.h"
 
 extern "C" {
-    // Get CPU cycles
-    uint64_t dc_get_cycles_ ();
-
     // Get time of day
     double dc_get_time_ ();
+
+    // RDTSC
+    uint64_t dc_get_cycles_ ();
 
     // Wrapper used to get the root of the D&C tree before calling the real tree
     // traversal

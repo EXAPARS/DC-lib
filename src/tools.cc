@@ -25,21 +25,89 @@
 
 extern tree_t *treeHead;
 
-// Get CPU cycles
-uint64_t DC_get_cycles ()
-{
-	uint64_t a, d;
-	__asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
-	return (d << 32) | a;
-}
+/*****************************************************************************/
+/***********                        Timer                          ***********/
+/*****************************************************************************/
 
 // Get time of day
-double DC_get_time ()
+inline double DC_get_time ()
 {
     struct timeval tv;
     gettimeofday (&tv, NULL);
     return (double)tv.tv_sec + (double) tv.tv_usec * 1.e-6;
 }
+
+// RDTSC
+inline uint64_t DC_get_cycles ()
+{
+    uint64_t a, d;
+    __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
+    return (d << 32) | a;
+}
+
+// Constructor
+DC_timer::DC_timer () : avgTime (0), timeCtr (0), avgCycles (0), cyclesCtr (0)
+{}
+
+// Return the average time of day
+inline double DC_timer::get_avg_time ()
+{
+    return avgTime;
+}
+
+// Reset the average time of day
+inline void DC_timer::time_reset ()
+{
+    avgTime = 0;
+    timeCtr = 0;
+}
+
+// Stop time of day timer
+inline void DC_timer::time_stop ()
+{
+    double stopTime = DC_get_time ();
+    avgTime = timeCtr * avgTime + (stopTime - startTime);
+    timeCtr++;
+    avgTime /= timeCtr;
+}
+
+// Start time of day timer
+inline void DC_timer::time_start ()
+{
+    startTime = DC_get_time ();
+}
+
+// Return the average cycle counter
+inline uint64_t DC_timer::get_avg_cycles ()
+{
+    return avgCycles;
+}
+
+// Reset the average cycles counter
+inline void DC_timer::cycles_reset ()
+{
+    avgCycles = 0;
+    cyclesCtr = 0;
+}
+
+// Stop cycle counter
+inline void DC_timer::cycles_stop ()
+{
+    uint64_t stopCycles = DC_get_cycles ();
+    avgCycles = cyclesCtr * avgCycles + (stopCycles - startCycles);
+    cyclesCtr++;
+    avgCycles /= cyclesCtr;
+}
+
+// Start cycle counter
+inline void DC_timer::cycles_start ()
+{
+    startCycles = DC_get_cycles ();
+}
+
+/*****************************************************************************/
+/***********                      Quick sort                       ***********/
+/*****************************************************************************/
 
 // Sort by ascending node values couple arrays using parallel quick sort
 void quick_sort (couple_t *tab, int begin, int end)

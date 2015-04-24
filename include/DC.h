@@ -51,11 +51,40 @@ typedef struct {
     int elem, node;
 } couple_t;
 
-// Get CPU cycles
-uint64_t DC_get_cycles ();
+// Compute the average time/cycles of each (start, stop) intervals until reset call
+class DC_timer
+{
+    public:
+        // Constructor
+        DC_timer ();
+
+        // Get time of day
+        double get_avg_time ();
+        void time_reset ();
+        void time_stop ();
+        void time_start ();
+
+        // RDTSC
+        uint64_t get_avg_cycles ();
+        void cycles_reset ();
+        void cycles_stop ();
+        void cycles_start ();
+
+    private:
+        // Get time of day
+        double startTime, avgTime;
+        int timeCtr;
+
+        // RDTSC
+        uint64_t startCycles, avgCycles;
+        int cyclesCtr;
+};
 
 // Get time of day
 double DC_get_time ();
+
+// RDTSC
+uint64_t DC_get_cycles ();
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
 void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),

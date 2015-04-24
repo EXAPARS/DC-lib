@@ -22,11 +22,19 @@
 
 using namespace std;
 
-// Get CPU cycles
-uint64_t DC_get_cycles ();
+/*****************************************************************************/
+/***********                        Timers                         ***********/
+/*****************************************************************************/
 
 // Get time of day
 double DC_get_time ();
+
+// RDTSC
+uint64_t DC_get_cycles ();
+
+/*****************************************************************************/
+/***********                      Quick sort                       ***********/
+/*****************************************************************************/
 
 // Sort by ascending node values couple arrays using parallel quick sort
 void quick_sort (couple_t *tab, int begin, int end);
