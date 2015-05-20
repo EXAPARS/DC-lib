@@ -264,8 +264,8 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     // Create the D&C tree & the permutation functions
     partitioning (elemToNode, nbElem, dimElem, nbNodes);
 
-    // Hybrid version with coloring of the leaves of the D&C tree
-    #ifdef DC_HYBRID
+    // Vectorial version with coloring of the leaves of the D&C tree
+    #ifdef DC_VEC
     	coloring (elemToNode, nbElem, dimElem, nbNodes);
     #endif
 }

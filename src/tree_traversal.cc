@@ -40,7 +40,7 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         if (tree.firstEdge == -1) DCargs.isSep = 1;
         else                      DCargs.isSep = 0;
 
-        #ifdef DC_HYBRID
+        #ifdef DC_VEC
             // Call user vectorial function on full colors
             DCargs.firstElem = tree.firstElem;
             DCargs.lastElem  = tree.vecOffset;

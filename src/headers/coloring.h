@@ -32,7 +32,7 @@ void DC_create_elemToElem (list_t *elemToElem, index_t &nodeToElem, int *elemToN
 void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
                           int dimElem, int nbNodes);
 
-#ifdef DC_HYBRID
+#ifdef DC_VEC
 
 // Assign a color to the elements of a given leaf following the bounded colors strategy
 // & return the number of colors

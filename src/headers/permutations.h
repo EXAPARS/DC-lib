@@ -34,7 +34,7 @@ void DC_renumber_int_array (int *tab, int size, bool isFortran);
 void merge_permutations (int *localElemPerm, int globalNbElem, int localNbElem,
 						 int firstElem, int lastElem);
 
-#ifdef DC_HYBRID
+#ifdef DC_VEC
 // Create coloring permutation array with full vectorial colors stored first &
 // return the index of the last element in a full vectorial color
 int create_coloring_permutation (int *perm, int *part, int *card, int size,

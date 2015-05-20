@@ -31,7 +31,7 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
     treeFile.read ((char*)&tree.lastNode,  sizeof (int));
     treeFile.read ((char*)&tree.firstEdge, sizeof (int));
     treeFile.read ((char*)&tree.lastEdge,  sizeof (int));
-    #ifdef DC_HYBRID
+    #ifdef DC_VEC
         treeFile.read ((char*)&tree.vecOffset, sizeof (int));
     #else
         tree.vecOffset = 0;
@@ -88,7 +88,7 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
     treeFile.write ((char*)&tree.lastNode,  sizeof (int));
     treeFile.write ((char*)&tree.firstEdge, sizeof (int));
     treeFile.write ((char*)&tree.lastEdge,  sizeof (int));
-    #ifdef DC_HYBRID
+    #ifdef DC_VEC
         treeFile.write ((char*)&tree.vecOffset, sizeof (int));
     #endif
 

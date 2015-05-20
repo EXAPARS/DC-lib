@@ -9,7 +9,7 @@ It is used to exploit efficiently shared memory parallelism in 3D unstuctured ap
 The DC-lib uses the Intel Cilk Plus tasks based runtime.
 Two versions of the library are available:
 - A pure D&C version.
-- An hybrid version combining D&C with mesh coloring to enable vectorization at task level.
+- A vectorial version combining D&C with mesh coloring to enable vectorization at task level.
 
 How to compile
 --------------
@@ -19,18 +19,18 @@ The build directory is "DC-lib/build".
 The path to the METIS library can be se at the beginning of the iMake file.
 
 A single command is required to compile a new binary:
-  ./iMake [hybrid] [$VECTOR_LENGTH] [tree]
+  ./iMake [vec] [$VECTOR_LENGTH] [tree]
 
-- The hybrid option is used to compile the library using the D&C + coloring version.
+- The vec option is used to compile the library using the D&C + coloring version.
   Default uses the pure D&C version.
 
-- The $VECTOR_LENGTH variable must be specified when using the hybrid version.
+- The $VECTOR_LENGTH variable must be specified when using the vec version.
   It can be either SSE, AVX or MIC depending on the target architecture.
 
 - The tree option is used to create a new D&C tree and new permutation functions.
   If not specified, the application will try to read the existing tree and permutations.
   The created tree and permutations are stored in "Mini-FEM/data/$USE_CASE/DC_tree".
-  They are associated to the code version (D&C or D&C Hybrid), to the partition size,
+  They are associated to the code version (D&C or D&C Vec), to the partition size,
   and to the number of MPI processes. The files name can be read this way:
     $VERSION_$PARTITION_SIZE_$NB_PROCESS_$PROCESS_RANK
 
@@ -125,7 +125,7 @@ Inputs:
 
 This function is used to parallelized user functions iterating over mesh elements.
 It uses the precomputed D&C tree to split the element interval in many parallel tasks.
-If the hybrid option is used at compile time, users can call both a function iterating
+If the vec option is used at compile time, users can call both a function iterating
 sequentially over the elements, and a function iterating over the elements with a stride
 equal to the vector length specified at compile time.
 

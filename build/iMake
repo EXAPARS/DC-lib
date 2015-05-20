@@ -34,7 +34,7 @@ fi
 # Parse arguments
 DISTRI=0
 SHARED=0
-HYBRID=0
+VECTO=0
 ARCHI=0
 TREE=0
 STATS=0
@@ -60,8 +60,8 @@ for i in $@; do
         SHARED="CILK"
     elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
         SHARED="OMP"
-    elif [[ $i == "hybrid" ]]; then
-        HYBRID=1
+    elif [[ $i == "vec" ]] || [[ $i == "vecto" ]]; then
+        VECTO=1
     elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
     elif [[ $i == "avx" ]]; then
@@ -92,7 +92,7 @@ if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
              \\033[0;39m"
     exit
 fi
-if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
+if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
@@ -113,23 +113,23 @@ if [[ $ARCHI == "mic" ]]; then
     if [[ $TREE == 1 ]]; then
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DVECTO=$VECTO -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DDISTRI=$DISTRI -DSHARED=$SHARED -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
               -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 else
     if [[ $TREE == 1 ]]; then
         cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DVECTO=$VECTO -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
-        cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DHYBRID=$HYBRID -DARCHI=$ARCHI \
+        cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
               -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
