@@ -64,28 +64,20 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
             tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
             #pragma omp task default(shared)
             tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
-
             // Synchronization
             #pragma omp taskwait
-
-            // Separator recursion, if it is not empty
-            if (tree.sep != nullptr) {
-                tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
-            }
         #elif CILK
             // Left & right recursion
             cilk_spawn
             tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
             tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
-
             // Synchronization
             cilk_sync;
-
-            // Separator recursion, if it is not empty
-            if (tree.sep != nullptr) {
-                tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
-            }
         #endif
+        // Separator recursion, if it is not empty
+        if (tree.sep != nullptr) {
+            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
+        }
     }
 }
 

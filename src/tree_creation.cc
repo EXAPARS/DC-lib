@@ -36,8 +36,7 @@ int *elemPerm = nullptr, *nodePerm = nullptr;
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Compute the edge interval for each leaf of the D&C tree
-void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
-                             int nbNodes)
+void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode)
 {
     // If current node is a leaf
     if (tree.left == nullptr && tree.right == nullptr) {
@@ -46,17 +45,20 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
         tree.lastEdge  = nodeToNodeRow[tree.lastNode+1] - 1;
     }
     else {
-        // Left & right recursion
         #ifdef OMP
+            // Left & right recursion
             #pragma omp task default (shared)
-            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
+            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode);
             #pragma omp task default (shared)
-            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
+            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode);
+            // Synchronization
             #pragma omp taskwait
         #elif CILK
+            // Left & right recursion
             cilk_spawn
-            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode, nbNodes);
-            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode, nbNodes);
+            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode);
+            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode);
+            // Synchronization
             cilk_sync;
         #endif
     }
@@ -64,18 +66,18 @@ void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,
 
 // Wrapper used to get the root of the D&C tree before computing the edge intervals
 // for CSR reset
-void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int nbNodes)
+void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode)
 {
     #ifdef OMP
         #pragma omp parallel
         #pragma omp single nowait
     #endif
-    compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode, nbNodes);
+    compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode);
 }
 
 // Initialize a node of the D&C tree
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
-				   int firstNode, int lastNode, bool isLeaf)
+                   int firstNode, int lastNode, bool isLeaf)
 {
 	tree.firstElem = firstElem;
 	tree.lastElem  = lastElem - nbSepElem;
@@ -105,7 +107,6 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 {
 	for (int i = 0; i < nbElem; i++) {
 		int node, leftCtr = 0, rightCtr = 0;
-
 		for (int j = 0; j < dimElem; j++) {
 			node = elemToNode[(i+offset)*dimElem+j];
 			if (nodePart[node] <= separator) leftCtr++;
@@ -125,7 +126,8 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 	}
 }
 
-// Compute the interval of nodes and elements at each node of the D&C tree
+// Create the D&C tree and the element permutation, and compute the intervals of nodes
+// and elements at each node of the tree
 void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
                               int *nodePart, int *nodePartSize, int globalNbElem,
                               int dimElem, int firstPart, int lastPart, int firstElem,
@@ -145,22 +147,22 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
             fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
         #endif
         return;
-	}
+    }
 
-	// Else, prepare next left, right & separator recursion
-	int nbLeftElem = 0, nbSepElem = 0, nbLeftNodes = 0;
-	int separator = firstPart + (lastPart - firstPart) / 2;
+    // Else, prepare next left, right & separator recursion
+    int nbLeftElem = 0, nbSepElem = 0, nbLeftNodes = 0;
+    int separator = firstPart + (lastPart - firstPart) / 2;
 
-	// Create local element partition & count left & separator elements
-	int *localElemPart = new int [localNbElem];
-	if (sepToNode == nullptr) {
+    // Create local element partition & count left & separator elements
+    int *localElemPart = new int [localNbElem];
+    if (sepToNode == nullptr) {
         create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, dimElem,
                           separator, firstElem, &nbLeftElem, &nbSepElem);
-	}
-	else {
+    }
+    else {
         create_elem_part (localElemPart, nodePart, sepToNode, localNbElem, dimElem,
                           separator, sepOffset, &nbLeftElem, &nbSepElem);
-	}
+    }
 
     // Count the left nodes if this not a separator
     if (nodePartSize != nullptr) {
@@ -169,76 +171,64 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
         }
     }
 
-	// Create local element permutation
-	int *localElemPerm = new int [localNbElem];
-	DC_create_permutation (localElemPerm, localElemPart, localNbElem, 3);
-	delete[] localElemPart;
+    // Create local element permutation
+    int *localElemPerm = new int [localNbElem];
+    DC_create_permutation (localElemPerm, localElemPart, localNbElem, 3);
+    delete[] localElemPart;
 
     // Execution is correct without mutex although cilkscreen detects a race condition
     pthread_mutex_lock (&mergeMutex);
-	// Apply local element permutation to global element permutation
-	merge_permutations (localElemPerm, globalNbElem, localNbElem, firstElem,
-						lastElem);
+    // Apply local element permutation to global element permutation
+    merge_permutations (localElemPerm, globalNbElem, localNbElem, firstElem, lastElem);
     pthread_mutex_unlock (&mergeMutex);
 
-	// Permute elemToNode and sepToNode with local element permutation
-	DC_permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem,
+    // Permute elemToNode and sepToNode with local element permutation
+    DC_permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem,
                              firstElem);
-	if (sepToNode != nullptr) {
-		DC_permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
+    if (sepToNode != nullptr) {
+        DC_permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
                                  sepOffset);
-	}
-	delete[] localElemPerm;
+    }
+    delete[] localElemPerm;
 
-	// Initialize current node
-	init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
+    // Initialize current node
+    init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
     #ifdef STATS
         fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem);
     #endif
 
-	// Left & right recursion
+    // Left & right recursion
     #ifdef OMP
-	    #pragma omp task default(shared)
-        recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart,
-                                 nodePartSize, globalNbElem, dimElem, firstPart,
-                                 separator, firstElem, firstElem+nbLeftElem-1,
-                                 firstNode, firstNode+nbLeftNodes-1, sepOffset
-        #ifdef STATS
-					             , dcFile, 3*curNode+1, 1);
-        #else
-					             );
-        #endif
-	    #pragma omp task default(shared)
-		recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
-								nodePartSize, globalNbElem, dimElem, separator+1,
-								lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
-								firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
-		#ifdef STATS
-								, dcFile, 3*curNode+2, 2);
-		#else
-								);
-		#endif
-        #pragma omp taskwait
+        #pragma omp task default(shared)
     #elif CILK
         cilk_spawn
-	    recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart,
-                                 nodePartSize, globalNbElem, dimElem, firstPart,
-                                 separator, firstElem, firstElem+nbLeftElem-1,
-                                 firstNode, firstNode+nbLeftNodes-1, sepOffset
-        #ifdef STATS
-        					     , dcFile, 3*curNode+1, 1);
-        #else
-                                 );
-        #endif
-	    recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
-                                 nodePartSize, globalNbElem, dimElem, separator+1,
-                                 lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
-                                 firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
-        #ifdef STATS
-                                 , dcFile, 3*curNode+2, 2);
-        #else
-                                 );
-        #endif
+    #endif
+    recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart,
+                             nodePartSize, globalNbElem, dimElem, firstPart,
+                             separator, firstElem, firstElem+nbLeftElem-1,
+                             firstNode, firstNode+nbLeftNodes-1, sepOffset
+    #ifdef STATS
+                             , dcFile, 3*curNode+1, 1);
+    #else
+                             );
+    #endif
+    #ifdef OMP
+        #pragma omp task default(shared)
+    #endif
+    recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
+                             nodePartSize, globalNbElem, dimElem, separator+1,
+                             lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
+                             firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
+    #ifdef STATS
+                             , dcFile, 3*curNode+2, 2);
+    #else
+                             );
+    #endif
+
+    // Synchronization
+    #ifdef OMP
+        #pragma omp taskwait
+    #elif CILK
 	    cilk_sync;
     #endif
 

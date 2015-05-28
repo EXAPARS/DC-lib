@@ -104,7 +104,7 @@ void DC_create_nodeToElem (index_t &nodeToElem, int *elemToNode, int nbElem,
         while (couple[ctr].node == i) {
             nodeToElem.value[ctr] = couple[ctr].elem;
             ctr++;
-			if (ctr == nbElem * dimElem) break;
+            if (ctr == nbElem * dimElem) break;
         }
     }
     nodeToElem.index[nbNodes] = ctr;

@@ -92,24 +92,23 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
     int nbSepNodes = 0;
     int *sepRenum = new int [(lastSepElem - firstSepElem + 1) * dimElem];
 
-	for (int i = firstSepElem * dimElem, j = 0; i < (lastSepElem+1)*dimElem;
-             i++, j++) {
-		int newNode, oldNode = elemToNode[i];
-		bool isNew = true;
-		for (newNode = 0; newNode < nbSepNodes; newNode++) {
-			if (oldNode == sepRenum[newNode]) {
-				isNew = false;
-				break;
-			}
-		}
-		if (isNew) {
+    for (int i = firstSepElem * dimElem, j = 0; i < (lastSepElem+1)*dimElem; i++, j++){
+        int newNode = 0, oldNode = elemToNode[i];
+        bool isNew = true;
+        for (newNode = 0; newNode < nbSepNodes; newNode++) {
+            if (oldNode == sepRenum[newNode]) {
+                isNew = false;
+                break;
+            }
+        }
+        if (isNew) {
             sepRenum[nbSepNodes] = oldNode;
             nbSepNodes++;
         }
-		sepToNode[j] = newNode;
-	}
+        sepToNode[j] = newNode;
+    }
     delete[] sepRenum;
-	return nbSepNodes;
+    return nbSepNodes;
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
@@ -143,6 +142,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     int *graphValue = new int [nbSepNodes * 15];
     int *nodePart   = new int [nbSepNodes];
     mesh_to_nodal (graphIndex, graphValue, sepToNode, nbSepElem, dimElem, nbSepNodes);
+
     // Execution is correct without mutex although cilkscreen detects many race
     // conditions. Check if the problem is solved with future version of METIS (5.0)
     pthread_mutex_lock (&metisMutex);
@@ -155,11 +155,10 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     // Create the separator D&C tree
     recursive_tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr,
                              globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
-                             lastSepElem, -1, -1, 0
     #ifdef STATS
-                             , dcFile, curNode, -1);
+                             lastSepElem, -1, -1, 0, dcFile, curNode, -1);
     #else
-                             );
+                             lastSepElem, -1, -1, 0);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
@@ -167,13 +166,13 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
 // Divide & Conquer partitioning of elemToNode array
 void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
-	// Fortran to C elemToNode conversion
+    // Fortran to C elemToNode conversion
     #ifdef OMP
         #pragma omp parallel for
         for (int i = 0; i < nbElem * dimElem; i++) {
     #elif CILK
         cilk_for (int i = 0; i < nbElem * dimElem; i++) {
-    #endif    
+    #endif
         elemToNode[i]--;
     }
 
@@ -198,6 +197,7 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     #endif
 		elemPerm[i] = i;
 	}
+
     // Compute the number of nodes per partition
     int *nodePartSize = new int [nbPart] ();
     for (int i = 0; i < nbNodes; i++) {
@@ -209,23 +209,19 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         string fileName = "dcTree_"+to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
     	ofstream dcFile (fileName, ios::out | ios::trunc);
     	init_dc_file (dcFile, nbPart);
-		#ifdef OMP
-			#pragma omp parallel
-			#pragma omp single nowait
-        #endif
-    	recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-                                 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-                                 nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
+    #endif
+	#ifdef OMP
+		#pragma omp parallel
+		#pragma omp single nowait
+    #endif
+    recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
+                             nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+    #ifdef STATS
+                             nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
     	close_dc_file (dcFile);
     	dc_stat ();
     #else
-		#ifdef OMP
-			#pragma omp parallel
-			#pragma omp single nowait
-        #endif
-        recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-        						 nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
-        						 nbElem-1, 0, nbNodes-1, 0);
+                             nbElem-1, 0, nbNodes-1, 0);
     #endif
     delete[] nodePartSize;
 

@@ -85,9 +85,9 @@ void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes)
 
 // Wrapper used to get the root of the D&C tree before computing the edge intervals
 // for CSR reset
-void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *nbNodes)
+void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode)
 {
-    DC_finalize_tree (nodeToNodeRow, elemToNode, *nbNodes);
+    DC_finalize_tree (nodeToNodeRow, elemToNode);
 }
 
 // Create the D&C tree and the permutations
