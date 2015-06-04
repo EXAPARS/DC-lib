@@ -30,13 +30,13 @@
 #include "partitioning.h"
 
 extern tree_t *treeHead;
-extern int *elemPerm, *nodePerm;
+extern int *elemPerm, *nodePerm, *nodeOwner;
 
 pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Create a nodal graph from a tetrahedron mesh (created from METIS)
-void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
-                    int nbElem, int dimElem, int nbNodes)
+void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode, int nbElem,
+                    int dimElem, int nbNodes)
 {
     int nEdges, *nPtr, *nInd, *marker;
 
@@ -112,22 +112,33 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
-                       int firstSepElem, int lastSepElem
+void sep_partitioning (tree_t &tree, int *elemToNode, int *nodePerm, int globalNbElem,
+                       int dimElem, int firstSepElem, int lastSepElem, int firstNode,
 #ifdef STATS
-					   , ofstream &dcFile, int curNode)
+                       int lastNode, int curNode, ofstream &dcFile)
 #else
-                       )
+                       int lastNode, int curNode)
 #endif
 {
-    // If there is not enough element in the separator, fill the D&C tree & exit
+    // If there is not enough element in the separator
     int nbSepElem = lastSepElem - firstSepElem + 1;
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
-        init_dc_tree (tree, firstSepElem, lastSepElem, 0, -1, -1, true);
+
+        // Set the last updater of each node
+        for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
+            int node = nodePerm[elemToNode[i]];
+            nodeOwner[node] = curNode;
+        }
+
+        // Initialize the leaf
+        init_dc_tree (tree, firstSepElem, lastSepElem, 0, firstNode, lastNode, true,
+                      true);
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3);
         #endif
+
+        // End of recursion
         return;
     }
 
@@ -153,17 +164,17 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    recursive_tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr,
-                             globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
+    tree_creation (tree, elemToNode, sepToNode, nodePart, nodePerm, nullptr,
+                   globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem,
     #ifdef STATS
-                             lastSepElem, -1, -1, 0, dcFile, curNode, -1);
+                   firstNode, lastNode, 0, curNode, true, dcFile, -1);
     #else
-                             lastSepElem, -1, -1, 0);
+                   firstNode, lastNode, 0, curNode, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
-// Divide & Conquer partitioning of elemToNode array
+// Divide & Conquer partitioning
 void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
     // Fortran to C elemToNode conversion
@@ -188,15 +199,8 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
                               nullptr, &objVal, nodePart);
     delete[] graphValue, delete[] graphIndex;
 
-	// Initialize the global element permutation
-    #ifdef OMP
-        #pragma omp parallel for
-    	for (int i = 0; i < nbElem; i++) {
-    #elif CILK
-    	cilk_for (int i = 0; i < nbElem; i++) {
-    #endif
-		elemPerm[i] = i;
-	}
+    // Create node permutation from node partition
+    DC_create_permutation (nodePerm, nodePart, nbNodes, nbPart);
 
     // Compute the number of nodes per partition
     int *nodePartSize = new int [nbPart] ();
@@ -204,30 +208,38 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         nodePartSize[nodePart[i]]++;
     }
 
-	// Create D&C tree & its dot file
+    // Initialize the global element permutation
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbElem; i++) {
+    #elif CILK
+        cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
+        elemPerm[i] = i;
+    }
+
+    // Create D&C tree dot file
     #ifdef STATS
         string fileName = "dcTree_"+to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
-    	ofstream dcFile (fileName, ios::out | ios::trunc);
-    	init_dc_file (dcFile, nbPart);
+        ofstream dcFile (fileName, ios::out | ios::trunc);
+        init_dc_file (dcFile, nbPart);
     #endif
+
+	// Create D&C tree
 	#ifdef OMP
 		#pragma omp parallel
 		#pragma omp single nowait
     #endif
-    recursive_tree_creation (*treeHead, elemToNode, nullptr, nodePart,
-                             nodePartSize, nbElem, dimElem, 0, nbPart-1, 0,
+    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePerm, nodePartSize,
+                   nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
     #ifdef STATS
-                             nbElem-1, 0, nbNodes-1, 0, dcFile, 0, -1);
+                   , dcFile, -1);
     	close_dc_file (dcFile);
     	dc_stat ();
     #else
-                             nbElem-1, 0, nbNodes-1, 0);
+                   );
     #endif
-    delete[] nodePartSize;
-
-	// Create node permutation from node partition
-	DC_create_permutation (nodePerm, nodePart, nbNodes, nbPart);
-	delete[] nodePart;
+    delete[] nodePartSize, delete[] nodePart;
 
 	// C to Fortran elemToNode conversion
     #ifdef OMP

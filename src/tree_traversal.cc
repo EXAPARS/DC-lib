@@ -33,12 +33,13 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
 
         // Initialize the D&C arguments
         DCargs_t DCargs;
-        DCargs.firstNode = tree.firstNode;
-        DCargs.lastNode  = tree.lastNode;
-        DCargs.firstEdge = tree.firstEdge;
-        DCargs.lastEdge  = tree.lastEdge;
-        if (tree.firstEdge == -1) DCargs.isSep = 1;
-        else                      DCargs.isSep = 0;
+        DCargs.ownedNodes   = tree.ownedNodes;
+        DCargs.nbOwnedNodes = tree.nbOwnedNodes;
+        DCargs.firstNode    = tree.firstNode;
+        DCargs.lastNode     = tree.lastNode;
+        DCargs.firstEdge    = tree.firstEdge;
+        DCargs.lastEdge     = tree.lastEdge;
+        DCargs.isSep        = tree.isSep;
 
         #ifdef DC_VEC
             // Call user vectorial function on full colors

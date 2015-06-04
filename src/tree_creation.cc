@@ -18,6 +18,7 @@
     #include <cilk/cilk.h>
 #endif
 #include <pthread.h>
+#include <limits.h>
 
 #include "tools.h"
 #include "coloring.h"
@@ -28,76 +29,108 @@
 // The D&C tree and the permutations are global in order to persist from one call
 // to the library to another
 tree_t *treeHead = nullptr;
-int *elemPerm = nullptr, *nodePerm = nullptr;
+int *elemPerm = nullptr, *nodePerm = nullptr, *nodeOwner = nullptr;
 
 #ifdef TREE_CREATION
 
 // Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Compute the edge interval for each leaf of the D&C tree
-void compute_edge_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode)
+// Compute the edge interval and the list of nodes owned by each leaf of the D&C tree
+void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int curNode)
 {
     // If current node is a leaf
     if (tree.left == nullptr && tree.right == nullptr) {
-        // Get the first and last edges of the leaf
-        tree.firstEdge = nodeToNodeRow[tree.firstNode];
-        tree.lastEdge  = nodeToNodeRow[tree.lastNode+1] - 1;
+
+        // Compute the number of nodes owned by current leaf and fill the node list
+        int nbOwnedNodes = 0, ctr = 0;
+        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+            if (nodeOwner[i] == curNode) nbOwnedNodes++;
+        }
+        tree.ownedNodes   = new int [nbOwnedNodes];
+        tree.nbOwnedNodes = nbOwnedNodes;
+        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+            if (nodeOwner[i] == curNode) {
+                tree.ownedNodes[ctr] = i;
+                ctr++;
+            }
+            if (ctr == nbOwnedNodes) break;
+        }
+
+        // Get the first and last edges of the leaf if current leaf is not a separator
+        if (tree.isSep) {
+            tree.firstNode = -1;
+            tree.lastNode  = -1;
+            tree.firstEdge = -1;
+            tree.lastEdge  = -1;
+        }
+        else {
+            tree.firstEdge = nodeToNodeRow[tree.firstNode];
+            tree.lastEdge  = nodeToNodeRow[tree.lastNode+1] - 1;
+        }
     }
     else {
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default (shared)
-            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode);
+            compute_intervals (*tree.right, nodeToNodeRow, elemToNode, 3*curNode+2);
             #pragma omp task default (shared)
-            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode);
+            compute_intervals (*tree.left, nodeToNodeRow, elemToNode, 3*curNode+1);
             // Synchronization
             #pragma omp taskwait
         #elif CILK
             // Left & right recursion
             cilk_spawn
-            compute_edge_intervals (*tree.left, nodeToNodeRow, elemToNode);
-            compute_edge_intervals (*tree.right, nodeToNodeRow, elemToNode);
+            compute_intervals (*tree.right, nodeToNodeRow, elemToNode, 3*curNode+2);
+            compute_intervals (*tree.left, nodeToNodeRow, elemToNode, 3*curNode+1);
             // Synchronization
             cilk_sync;
         #endif
+        // Separator recursion, if it is not empty
+        if (tree.sep != nullptr) {
+            compute_intervals (*tree.sep, nodeToNodeRow, elemToNode, 3*curNode+3);
+        }
     }
 }
 
-// Wrapper used to get the root of the D&C tree before computing the edge intervals
-// for CSR reset
+// Wrapper used to get the root of the D&C tree before computing the edge intervals and
+// the list of nodes owned by each leaf of the D&C tree
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode)
 {
     #ifdef OMP
         #pragma omp parallel
         #pragma omp single nowait
     #endif
-    compute_edge_intervals (*treeHead, nodeToNodeRow, elemToNode);
+    compute_intervals (*treeHead, nodeToNodeRow, elemToNode, 0);
+    delete[] nodeOwner;
 }
 
 // Initialize a node of the D&C tree
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
-                   int firstNode, int lastNode, bool isLeaf)
+                   int firstNode, int lastNode, bool isSep, bool isLeaf)
 {
-	tree.firstElem = firstElem;
-	tree.lastElem  = lastElem - nbSepElem;
-	tree.lastSep   = lastElem;
-    tree.firstNode = firstNode;
-    tree.lastNode  = lastNode;
-    tree.firstEdge = -1;
-    tree.lastEdge  = -1;
-    tree.vecOffset = 0;
-	tree.left      = nullptr;
-	tree.right     = nullptr;
-	tree.sep       = nullptr;
-
-	if (isLeaf == false) {
-  		tree.left  = new tree_t;
-  		tree.right = new tree_t;
-		if (nbSepElem > 0) {
-			tree.sep = new tree_t;
-		}
-	}
+    tree.left  = nullptr;
+    tree.right = nullptr;
+    tree.sep   = nullptr;
+    if (isLeaf == false) {
+        tree.left  = new tree_t;
+        tree.right = new tree_t;
+        if (nbSepElem > 0) {
+            tree.sep = new tree_t;
+        }
+    }
+    tree.ownedNodes = nullptr;
+    tree.firstElem  = firstElem;
+    tree.lastElem   = lastElem - nbSepElem;
+    tree.lastSep    = lastElem;
+    tree.firstNode  = firstNode;
+    tree.lastNode   = lastNode;
+    tree.firstEdge  = -1;
+    tree.lastEdge   = -1;
+    #ifdef DC_VEC
+        tree.vecOffset = 0;
+    #endif
+    tree.isSep = isSep;
 }
 
 // Create element partition & count left & separator elements
@@ -128,47 +161,69 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 
 // Create the D&C tree and the element permutation, and compute the intervals of nodes
 // and elements at each node of the tree
-void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
-                              int *nodePart, int *nodePartSize, int globalNbElem,
-                              int dimElem, int firstPart, int lastPart, int firstElem,
-                              int lastElem, int firstNode, int lastNode, int sepOffset
+void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
+                    int *nodePerm, int *nodePartSize, int globalNbElem, int dimElem,
+                    int firstPart, int lastPart, int firstElem, int lastElem,
+                    int firstNode, int lastNode, int sepOffset, int curNode, bool isSep
 #ifdef STATS
-                              , ofstream &dcFile, int curNode, int LRS)
+                    , ofstream &dcFile, int LRS)
 #else
-                              )
+                    )
 #endif
 {
-    // If current node is a leaf, initialize it & exit
+    // If current node is a leaf
     int nbPart = lastPart - firstPart + 1;
     int localNbElem = lastElem - firstElem + 1;
     if (nbPart < 2 || localNbElem <= MAX_ELEM_PER_PART) {
-        init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, true);
+
+        // Set the last updater of each node
+        if (isSep) {
+            for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
+                int node = nodePerm[elemToNode[i]];
+                nodeOwner[node] = curNode;
+            }
+        }
+        else {
+            for (int i = firstNode; i <= lastNode; i++) {
+                nodeOwner[i] = curNode;
+            }
+        }
+
+        // Initialize the leaf
+        init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, isSep, true);
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
         #endif
+
+        // End of recursion
         return;
     }
 
     // Else, prepare next left, right & separator recursion
-    int nbLeftElem = 0, nbSepElem = 0, nbLeftNodes = 0;
+    int nbLeftElem = 0, nbSepElem = 0, nbLeftNodes = 0, nbRightNodes = 0;
     int separator = firstPart + (lastPart - firstPart) / 2;
 
     // Create local element partition & count left & separator elements
     int *localElemPart = new int [localNbElem];
-    if (sepToNode == nullptr) {
-        create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, dimElem,
-                          separator, firstElem, &nbLeftElem, &nbSepElem);
-    }
-    else {
+    if (isSep) {
         create_elem_part (localElemPart, nodePart, sepToNode, localNbElem, dimElem,
                           separator, sepOffset, &nbLeftElem, &nbSepElem);
     }
+    else {
+        create_elem_part (localElemPart, nodePart, elemToNode, localNbElem, dimElem,
+                          separator, firstElem, &nbLeftElem, &nbSepElem);
+    }
 
-    // Count the left nodes if this not a separator
-    if (nodePartSize != nullptr) {
+    // Count the left & right nodes if current D&C node is not a separator
+    if (isSep) {
+        nbLeftNodes  = lastNode - firstNode + 1;
+        nbRightNodes = lastNode - firstNode + 1;
+    }
+    else {
         for (int i = firstPart; i <= separator; i++) {
             nbLeftNodes += nodePartSize[i];
         }
+        nbRightNodes = (lastNode - firstNode + 1) - nbLeftNodes;
     }
 
     // Create local element permutation
@@ -185,14 +240,15 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
     // Permute elemToNode and sepToNode with local element permutation
     DC_permute_int_2d_array (elemToNode, localElemPerm, localNbElem, dimElem,
                              firstElem);
-    if (sepToNode != nullptr) {
+    if (isSep) {
         DC_permute_int_2d_array (sepToNode, localElemPerm, localNbElem, dimElem,
                                  sepOffset);
     }
     delete[] localElemPerm;
 
     // Initialize current node
-    init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, false);
+    init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, isSep,
+                  false);
     #ifdef STATS
         fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem);
     #endif
@@ -203,44 +259,43 @@ void recursive_tree_creation (tree_t &tree, int *elemToNode, int *sepToNode,
     #elif CILK
         cilk_spawn
     #endif
-    recursive_tree_creation (*tree.left, elemToNode, sepToNode, nodePart,
-                             nodePartSize, globalNbElem, dimElem, firstPart,
-                             separator, firstElem, firstElem+nbLeftElem-1,
-                             firstNode, firstNode+nbLeftNodes-1, sepOffset
+    tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePerm,nodePartSize,
+                   globalNbElem, dimElem, separator+1, lastPart, firstElem+nbLeftElem,
+                   lastElem-nbSepElem, lastNode-nbRightNodes+1, lastNode, sepOffset+
     #ifdef STATS
-                             , dcFile, 3*curNode+1, 1);
+                   nbLeftElem, 3*curNode+2, isSep, dcFile, 2);
     #else
-                             );
+                   nbLeftElem, 3*curNode+2, isSep);
     #endif
     #ifdef OMP
         #pragma omp task default(shared)
     #endif
-    recursive_tree_creation (*tree.right, elemToNode, sepToNode, nodePart,
-                             nodePartSize, globalNbElem, dimElem, separator+1,
-                             lastPart, firstElem+nbLeftElem, lastElem-nbSepElem,
-                             firstNode+nbLeftNodes, lastNode, sepOffset+nbLeftElem
+    tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePerm, nodePartSize,
+                   globalNbElem, dimElem, firstPart, separator, firstElem, firstElem+
+                   nbLeftElem-1, firstNode, firstNode+nbLeftNodes-1, sepOffset,
     #ifdef STATS
-                             , dcFile, 3*curNode+2, 2);
+                   3*curNode+1, isSep, dcFile, 1);
     #else
-                             );
+                   3*curNode+1, isSep);
     #endif
 
     // Synchronization
     #ifdef OMP
         #pragma omp taskwait
     #elif CILK
-	    cilk_sync;
+        cilk_sync;
     #endif
 
-	// D&C partitioning of separator elements
-	if (nbSepElem > 0) {
-		sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem,
+    // D&C partitioning of separator elements
+    if (nbSepElem > 0) {
+        sep_partitioning (*tree.sep, elemToNode, nodePerm, globalNbElem, dimElem,
+                          lastElem-nbSepElem+1, lastElem, firstNode, lastNode,
         #ifdef STATS
-						  lastElem-nbSepElem+1, lastElem, dcFile, 3*curNode+3);
+                          3*curNode+3, dcFile);
         #else
-						  lastElem-nbSepElem+1, lastElem);
+                          3*curNode+3);
         #endif
-	}
+    }
 }
 
 // Create the D&C tree and the permutations
@@ -251,12 +306,23 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     elemPerm = new int [nbElem];
     nodePerm = new int [nbNodes];
 
+    // Initialize the owner of the nodes to MAX_INT (lower is owner)
+    nodeOwner = new int [nbNodes];
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbNodes; i++) {
+    #elif CILK
+        cilk_for (int i = 0; i < nbNodes; i++) {
+    #endif
+        nodeOwner[i] = INT_MAX;
+    }
+
     // Create the D&C tree & the permutation functions
     partitioning (elemToNode, nbElem, dimElem, nbNodes);
 
     // Vectorial version with coloring of the leaves of the D&C tree
     #ifdef DC_VEC
-    	coloring (elemToNode, nbElem, dimElem, nbNodes);
+        coloring (elemToNode, nbElem, dimElem, nbNodes);
     #endif
 }
 

@@ -33,8 +33,6 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
     treeFile.read ((char*)&tree.lastEdge,  sizeof (int));
     #ifdef DC_VEC
         treeFile.read ((char*)&tree.vecOffset, sizeof (int));
-    #else
-        tree.vecOffset = 0;
     #endif
 	treeFile.read ((char*)&isLeaf, sizeof (bool));
 

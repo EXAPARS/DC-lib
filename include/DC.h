@@ -25,19 +25,26 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    int firstElem, lastElem, lastSep;
-    int firstNode, lastNode;
-    int firstEdge, lastEdge;
-    int vecOffset;
     struct tree_s *left, *right, *sep;
+    int *ownedNodes;
+    int nbOwnedNodes,
+        firstElem, lastElem, lastSep,
+        firstNode, lastNode,
+        firstEdge, lastEdge;
+    #ifdef DC_VEC
+        int vecOffset;
+    #endif
+    bool isSep;
 } tree_t;
 
 // D&C arguments structure
 typedef struct DCargs_s {
-    int firstElem, lastElem;
-    int firstNode, lastNode;
-    int firstEdge, lastEdge;
-    int isSep;
+    int *ownedNodes;
+    int nbOwnedNodes,
+        firstElem, lastElem,
+        firstNode, lastNode,
+        firstEdge, lastEdge,
+        isSep;
 } DCargs_t;
 
 typedef struct {

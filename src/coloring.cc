@@ -204,32 +204,32 @@ void leaves_coloring (tree_t &tree, index_t &nodeToElem, int *elemToNode,
 	else {
         #ifdef OMP
             #ifdef STATS
-                #pragma omp task default (shared)            
-                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
-                                 colorPerLeaf, globalNbElem, dimElem);            
                 #pragma omp task default (shared)
                 leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
                                  colorPerLeaf, globalNbElem, dimElem);
+                #pragma omp task default (shared)
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);
             #else
                 #pragma omp task default (shared)
-                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
+                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem,
                                  dimElem);
                 #pragma omp task default (shared)
-                leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem,
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
                                  dimElem);
             #endif
             #pragma omp taskwait
         #else
 		    cilk_spawn
             #ifdef STATS
-                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
-                				 colorPerLeaf, globalNbElem, dimElem);
                 leaves_coloring (*tree.right, nodeToElem, elemToNode, elemPerColor,
                 				 colorPerLeaf, globalNbElem, dimElem);
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, elemPerColor,
+                                 colorPerLeaf, globalNbElem, dimElem);
             #else
-                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
-                                 dimElem);
                 leaves_coloring (*tree.right, nodeToElem, elemToNode, globalNbElem,
+                                 dimElem);
+                leaves_coloring (*tree.left, nodeToElem, elemToNode, globalNbElem,
                                  dimElem);
             #endif
             cilk_sync;

@@ -23,8 +23,8 @@
 #include "DC.h"
 
 // Create a nodal graph from a tetrahedron mesh (created from METIS)
-void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode,
-                    int nbElem, int dimElem, int nbNodes);
+void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode, int nbElem,
+                    int dimElem, int nbNodes);
 
 // Create temporal sepToNode array containing separator elements indexed
 // contiguously from 0 to nbSepElem and return the number of separator nodes
@@ -32,15 +32,15 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
                       int lastSepElem, int dimElem);
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
-                       int firstSepElem, int lastSepElem
+void sep_partitioning (tree_t &tree, int *elemToNode, int *nodePerm, int globalNbElem,
+                       int dimElem, int firstSepElem, int lastSepElem, int firstNode,
 #ifdef STATS
-					   , ofstream &dcFile, int curNode);
+                       int lastNode, int curNode, ofstream &dcFile);
 #else
-                       );
+                       int lastNode, int curNode);
 #endif
 
-// Divide & Conquer partitioning of elemToNode array
+// Divide & Conquer partitioning
 void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes);
 
 #endif
