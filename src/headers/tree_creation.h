@@ -41,9 +41,9 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 // Create the D&C tree and the element permutation, and compute the intervals of nodes
 // and elements at each node of the tree
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                    int *nodePerm, int *nodePartSize, int globalNbElem, int dimElem,
-                    int firstPart, int lastPart, int firstElem, int lastElem,
-                    int firstNode, int lastNode, int sepOffset, int curNode, bool isSep
+                    int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
+                    int lastPart, int firstElem, int lastElem, int firstNode,
+                    int lastNode, int sepOffset, int curNode, bool isSep
 #ifdef STATS
                     , ofstream &dcFile, int LRS);
 #else

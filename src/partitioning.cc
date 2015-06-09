@@ -112,12 +112,12 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int *nodePerm, int globalNbElem,
-                       int dimElem, int firstSepElem, int lastSepElem, int firstNode,
+void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
+                       int firstSepElem, int lastSepElem, int firstNode, int lastNode,
 #ifdef STATS
-                       int lastNode, int curNode, ofstream &dcFile)
+                       int curNode, ofstream &dcFile)
 #else
-                       int lastNode, int curNode)
+                       int curNode)
 #endif
 {
     // If there is not enough element in the separator
@@ -164,12 +164,12 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *nodePerm, int globalN
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    tree_creation (tree, elemToNode, sepToNode, nodePart, nodePerm, nullptr,
-                   globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem,
+    tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, globalNbElem,
+                   dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, firstNode,
     #ifdef STATS
-                   firstNode, lastNode, 0, curNode, true, dcFile, -1);
+                   lastNode, 0, curNode, true, dcFile, -1);
     #else
-                   firstNode, lastNode, 0, curNode, true);
+                   lastNode, 0, curNode, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
@@ -230,8 +230,8 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 		#pragma omp parallel
 		#pragma omp single nowait
     #endif
-    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePerm, nodePartSize,
-                   nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
+    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
+                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
     #ifdef STATS
                    , dcFile, -1);
     	close_dc_file (dcFile);

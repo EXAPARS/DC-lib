@@ -25,7 +25,6 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    struct tree_s *left, *right, *sep;
     int *ownedNodes;
     int nbOwnedNodes,
         firstElem, lastElem, lastSep,
@@ -35,6 +34,7 @@ typedef struct tree_s {
         int vecOffset;
     #endif
     bool isSep;
+    struct tree_s *left, *right, *sep;
 } tree_t;
 
 // D&C arguments structure

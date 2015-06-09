@@ -47,8 +47,8 @@ void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int c
         for (int i = tree.firstNode; i <= tree.lastNode; i++) {
             if (nodeOwner[i] == curNode) nbOwnedNodes++;
         }
-        tree.ownedNodes   = new int [nbOwnedNodes];
         tree.nbOwnedNodes = nbOwnedNodes;
+        if (nbOwnedNodes > 0) tree.ownedNodes = new int [nbOwnedNodes];
         for (int i = tree.firstNode; i <= tree.lastNode; i++) {
             if (nodeOwner[i] == curNode) {
                 tree.ownedNodes[ctr] = i;
@@ -109,6 +109,19 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode)
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
                    int firstNode, int lastNode, bool isSep, bool isLeaf)
 {
+    tree.ownedNodes   = nullptr;
+    tree.nbOwnedNodes = -1;
+    tree.firstElem    = firstElem;
+    tree.lastElem     = lastElem - nbSepElem;
+    tree.lastSep      = lastElem;
+    tree.firstNode    = firstNode;
+    tree.lastNode     = lastNode;
+    tree.firstEdge    = -1;
+    tree.lastEdge     = -1;
+    #ifdef DC_VEC
+        tree.vecOffset = 0;
+    #endif
+    tree.isSep = isSep;
     tree.left  = nullptr;
     tree.right = nullptr;
     tree.sep   = nullptr;
@@ -119,18 +132,6 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
             tree.sep = new tree_t;
         }
     }
-    tree.ownedNodes = nullptr;
-    tree.firstElem  = firstElem;
-    tree.lastElem   = lastElem - nbSepElem;
-    tree.lastSep    = lastElem;
-    tree.firstNode  = firstNode;
-    tree.lastNode   = lastNode;
-    tree.firstEdge  = -1;
-    tree.lastEdge   = -1;
-    #ifdef DC_VEC
-        tree.vecOffset = 0;
-    #endif
-    tree.isSep = isSep;
 }
 
 // Create element partition & count left & separator elements
@@ -162,9 +163,9 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 // Create the D&C tree and the element permutation, and compute the intervals of nodes
 // and elements at each node of the tree
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                    int *nodePerm, int *nodePartSize, int globalNbElem, int dimElem,
-                    int firstPart, int lastPart, int firstElem, int lastElem,
-                    int firstNode, int lastNode, int sepOffset, int curNode, bool isSep
+                    int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
+                    int lastPart, int firstElem, int lastElem, int firstNode,
+                    int lastNode, int sepOffset, int curNode, bool isSep
 #ifdef STATS
                     , ofstream &dcFile, int LRS)
 #else
@@ -259,7 +260,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     #elif CILK
         cilk_spawn
     #endif
-    tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePerm,nodePartSize,
+    tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePartSize,
                    globalNbElem, dimElem, separator+1, lastPart, firstElem+nbLeftElem,
                    lastElem-nbSepElem, lastNode-nbRightNodes+1, lastNode, sepOffset+
     #ifdef STATS
@@ -270,7 +271,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     #ifdef OMP
         #pragma omp task default(shared)
     #endif
-    tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePerm, nodePartSize,
+    tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
                    globalNbElem, dimElem, firstPart, separator, firstElem, firstElem+
                    nbLeftElem-1, firstNode, firstNode+nbLeftNodes-1, sepOffset,
     #ifdef STATS
@@ -288,12 +289,12 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
     // D&C partitioning of separator elements
     if (nbSepElem > 0) {
-        sep_partitioning (*tree.sep, elemToNode, nodePerm, globalNbElem, dimElem,
-                          lastElem-nbSepElem+1, lastElem, firstNode, lastNode,
+        sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem,lastElem-
+                          nbSepElem+1, lastElem, firstNode, lastNode, 3*curNode+3
         #ifdef STATS
-                          3*curNode+3, dcFile);
+                          , dcFile);
         #else
-                          3*curNode+3);
+                          );
         #endif
     }
 }
