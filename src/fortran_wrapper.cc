@@ -43,10 +43,9 @@ void dc_permute_double_2d_array_ (double *tab, int *nbItem, int *dimItem)
 }
 
 // Permute "tab" 2D array of int using "perm"
-void dc_permute_int_2d_array_ (int *tab, int *perm, int *nbItem, int *dimItem,
-                               int *offset)
+void dc_permute_int_2d_array_ (int *tab, int *nbItem, int *dimItem, int *offset)
 {
-    DC_permute_int_2d_array (tab, perm, *nbItem, *dimItem, *offset);
+    DC_permute_int_2d_array (tab, nullptr, *nbItem, *dimItem, *offset);
 }
 
 // Permute "tab" 1D array of int using node permutation
