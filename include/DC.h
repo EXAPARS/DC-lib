@@ -39,12 +39,11 @@ typedef struct tree_s {
 
 // D&C arguments structure
 typedef struct DCargs_s {
-    int *ownedNodes;
-    int nbOwnedNodes,
-        firstElem, lastElem,
+    int firstElem, lastElem,
         firstNode, lastNode,
         firstEdge, lastEdge,
-        isSep;
+        isSep, nbOwnedNodes;
+    int *ownedNodes;
 } DCargs_t;
 
 typedef struct {
