@@ -51,6 +51,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 #endif
 
 // Create the D&C tree and the permutations
-void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes);
+void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
+                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf);
 
 #endif

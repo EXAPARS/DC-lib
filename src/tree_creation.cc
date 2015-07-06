@@ -36,6 +36,58 @@ int *elemPerm = nullptr, *nodePerm = nullptr, *nodeOwner = nullptr;
 // Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Split the D&C tree into two D&C trees. One for the interfaces, the other for the
+// inner domain
+bool intf_tree_creation ()
+{
+    // Look if current leaf contains at least one node on one interface
+    bool hasIntfNode = false;
+    for (int i = firstElem * dimElem; i < (lastElem+1)*dimElem; i++) {
+        for (int j = 0; j < nbIntf; j++) {
+            for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
+                int intfNode = intfNodes[k];
+                if (elemToNode[i] == intfNode) {
+                    hasIntfNode = true;
+                    break;
+                }
+            }
+            if (hasIntfNode) break;
+        }
+        if (hasIntfNode) break;
+    }
+
+    // If current node is a leaf
+    if (tree.left == nullptr && tree.right == nullptr) {
+        // If leaf contains interface node(s)
+        if (hasIntfNode) {
+            // new feuille in DC intf tree containing only current leaf
+        }
+    }
+    else {
+        bool leftHasIntfNode, rightHasIntfNode, sepHasIntfNode = false;
+
+        // Left & right recursion
+        cilk_spawn
+        rightHasIntfNode = intf_tree_creation (*tree.right);
+        leftHasIntfNode  = intf_tree_creation (*tree.left);
+
+        // Synchronization
+        cilk_sync;
+
+        // Separator recursion, if it is not empty
+        if (tree.sep != nullptr) {
+            sepHasIntfNode = intf_tree_creation (*tree.sep);
+        }
+
+        // If both left & right sons have interface node(s)
+            // new feuille in DC intf tree containing only current leaf
+        // If exclusively left or right son has interface node(s)
+            // new feuille in DC intf tree
+    }
+
+    return hasIntfNode;
+}
+
 // Compute the edge interval and the list of nodes owned by each leaf of the D&C tree
 void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int curNode)
 {
@@ -300,7 +352,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 }
 
 // Create the D&C tree and the permutations
-void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
+void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
+                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -318,6 +371,9 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         nodeOwner[i] = INT_MAX;
     }
 
+//    int nbIntfElem = intf_partitioning (coord, elemToNode, intfIndex, intfNodes,
+//                                        nbElem, dimElem, nbNodes, dimNode, nbIntf);
+
     // Create the D&C tree & the permutation functions
     partitioning (elemToNode, nbElem, dimElem, nbNodes);
 
@@ -325,6 +381,9 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     #ifdef DC_VEC
         coloring (elemToNode, nbElem, dimElem, nbNodes);
     #endif
+
+    // Separation of the interface and the rest of the domain
+
 }
 
 #endif
