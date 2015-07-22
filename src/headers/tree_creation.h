@@ -43,7 +43,8 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
                     int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
                     int lastPart, int firstElem, int lastElem, int firstNode,
-                    int lastNode, int sepOffset, int curNode, bool isSep
+                    int lastNode, int sepOffset, int curNode, bool isSep,
+                    int nbIntf, int *intfIndex, int *intfNodes
 #ifdef STATS
                     , ofstream &dcFile, int LRS);
 #else
@@ -52,6 +53,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
 // Create the D&C tree and the permutations
 void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf);
+                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
+                     int rank);
 
 #endif

@@ -57,12 +57,22 @@ void leaf_dc_stat (tree_t &tree, ofstream &elemPerLeaf);
 void dc_stat ();
 
 /*****************************************************************************/
+/***********                   Interfaces stats                    ***********/
+/*****************************************************************************/
+
+// Count the total number of leaves and the number of interface leaves
+void count_intf_stats (bool hasIntfNode);
+
+// Show statistics on the number of interface leaves
+void store_intf_stats (int nbElem, int rank);
+
+/*****************************************************************************/
 /***********                   D&C tree dot file                   ***********/
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
 void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                          int LRS);
+                          int LRS, bool hasIntfNode);
 
 // Fill the nodes of the D&C tree dot file
 void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastElem,

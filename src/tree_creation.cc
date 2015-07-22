@@ -35,14 +35,14 @@ int *elemPerm = nullptr, *nodePerm = nullptr, *nodeOwner = nullptr;
 
 // Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
-
+/*
 // Split the D&C tree into two D&C trees. One for the interfaces, the other for the
 // inner domain
 bool intf_tree_creation ()
 {
-    // Look if current leaf contains at least one node on one interface
+    // Look if current D&C node contains at least one node on one interface
     bool hasIntfNode = false;
-    for (int i = firstElem * dimElem; i < (lastElem+1)*dimElem; i++) {
+    for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
         for (int j = 0; j < nbIntf; j++) {
             for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
                 int intfNode = intfNodes[k];
@@ -80,14 +80,19 @@ bool intf_tree_creation ()
         }
 
         // If both left & right sons have interface node(s)
-            // new feuille in DC intf tree containing only current leaf
+        if (leftHasIntfNode && rightHasIntfNode) {
+            // new feuille in DC intf tree containing only current node
+        }
         // If exclusively left or right son has interface node(s)
-            // new feuille in DC intf tree
+        if ((leftHasIntfNode && !rightHasIntfNode) ||
+           (!leftHasIntfNode &&  rightHasIntfNode)) {
+            // new feuille in DC intf tree containing current node & the left or right
+        }
     }
 
     return hasIntfNode;
 }
-
+*/
 // Compute the edge interval and the list of nodes owned by each leaf of the D&C tree
 void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int curNode)
 {
@@ -217,7 +222,8 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
                     int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
                     int lastPart, int firstElem, int lastElem, int firstNode,
-                    int lastNode, int sepOffset, int curNode, bool isSep
+                    int lastNode, int sepOffset, int curNode, bool isSep,
+                    int nbIntf, int *intfIndex, int *intfNodes
 #ifdef STATS
                     , ofstream &dcFile, int LRS)
 #else
@@ -228,6 +234,22 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     int nbPart = lastPart - firstPart + 1;
     int localNbElem = lastElem - firstElem + 1;
     if (nbPart < 2 || localNbElem <= MAX_ELEM_PER_PART) {
+
+        // Look if current leaf contains at least one node on one interface
+        bool hasIntfNode = false;
+        for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
+            for (int j = 0; j < nbIntf; j++) {
+                for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
+                    int intfNode = intfNodes[k] - 1;
+                    if (elemToNode[i] == intfNode) {
+                        hasIntfNode = true;
+                        break;
+                    }
+                }
+                if (hasIntfNode) break;
+            }
+            if (hasIntfNode) break;
+        }
 
         // Set the last updater of each node
         if (isSep) {
@@ -245,7 +267,9 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
         // Initialize the leaf
         init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, isSep, true);
         #ifdef STATS
-            fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS);
+            fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS,
+                                 hasIntfNode);
+            count_intf_stats (hasIntfNode);
         #endif
 
         // End of recursion
@@ -315,10 +339,11 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePartSize,
                    globalNbElem, dimElem, separator+1, lastPart, firstElem+nbLeftElem,
                    lastElem-nbSepElem, lastNode-nbRightNodes+1, lastNode, sepOffset+
+                   nbLeftElem, 3*curNode+2, isSep, nbIntf, intfIndex, intfNodes
     #ifdef STATS
-                   nbLeftElem, 3*curNode+2, isSep, dcFile, 2);
+                   , dcFile, 2);
     #else
-                   nbLeftElem, 3*curNode+2, isSep);
+                   );
     #endif
     #ifdef OMP
         #pragma omp task default(shared)
@@ -327,9 +352,9 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
                    globalNbElem, dimElem, firstPart, separator, firstElem, firstElem+
                    nbLeftElem-1, firstNode, firstNode+nbLeftNodes-1, sepOffset,
     #ifdef STATS
-                   3*curNode+1, isSep, dcFile, 1);
+                   3*curNode+1, isSep, nbIntf, intfIndex, intfNodes, dcFile, 1);
     #else
-                   3*curNode+1, isSep);
+                   3*curNode+1, isSep, nbIntf, intfIndex, intfNodes);
     #endif
 
     // Synchronization
@@ -341,19 +366,20 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
     // D&C partitioning of separator elements
     if (nbSepElem > 0) {
-        sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem,lastElem-
-                          nbSepElem+1, lastElem, firstNode, lastNode, 3*curNode+3
+        sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem, lastElem-
+                          nbSepElem+1, lastElem, firstNode, lastNode, nbIntf,
         #ifdef STATS
-                          , dcFile);
+                          intfIndex, intfNodes, 3*curNode+3, dcFile);
         #else
-                          );
+                          intfIndex, intfNodes, 3*curNode+3);
         #endif
     }
 }
 
 // Create the D&C tree and the permutations
 void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf)
+                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
+                     int rank)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -375,7 +401,8 @@ void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNo
 //                                        nbElem, dimElem, nbNodes, dimNode, nbIntf);
 
     // Create the D&C tree & the permutation functions
-    partitioning (elemToNode, nbElem, dimElem, nbNodes);
+    partitioning (elemToNode, nbElem, dimElem, nbNodes, nbIntf, intfIndex, intfNodes,
+                  rank);
 
     // Vectorial version with coloring of the leaves of the D&C tree
     #ifdef DC_VEC

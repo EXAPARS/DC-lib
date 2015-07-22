@@ -14,6 +14,11 @@
     You should have received a copy of the GNU Lesser General Public License along with
     the DC-lib. If not, see <http://www.gnu.org/licenses/>. */
 
+#ifdef XMPI
+    #include <mpi.h>
+#elif GASPI
+    #include <GASPI.h>
+#endif
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
@@ -208,17 +213,58 @@ void dc_stat ()
 }
 
 /*****************************************************************************/
+/***********                   Interfaces stats                    ***********/
+/*****************************************************************************/
+
+// Mutex to avoid race condition when incrementing leaf counters
+pthread_mutex_t intfStatsMutex = PTHREAD_MUTEX_INITIALIZER;
+int nbLeaves = 0, nbIntfLeaves = 0;
+
+// Count the total number of leaves and the number of interface leaves
+void count_intf_stats (bool hasIntfNode)
+{
+    pthread_mutex_lock (&intfStatsMutex);
+    nbLeaves++;
+    if (hasIntfNode) nbIntfLeaves++;
+    pthread_mutex_unlock (&intfStatsMutex);
+}
+
+// Store statistics on the number of interface leaves
+void store_intf_stats (int nbElem, int rank)
+{
+    string fileName = "intfRatio";
+    ofstream intfFile (fileName, ios::out | ios::trunc);
+    int localStats[2], globalStats[2];
+    localStats[0] = nbElem;
+    localStats[1] = nbIntfLeaves * 100 / nbLeaves;
+
+    #ifdef XMPI
+        MPI_Reduce (localStats, globalStats, 2, MPI_INT, MPI_MAX, 0,
+                    MPI_COMM_WORLD);
+    #elif GASPI
+        gaspi_allreduce (localStats, globalStats, 2, GASPI_OP_MAX,
+                         GASPI_TYPE_INT, GASPI_GROUP_ALL, GASPI_BLOCK);
+    #endif
+
+    if (rank == 0) {
+        intfFile << "nbElements intfRatio\n" << globalStats[0] << " " << globalStats[1]
+                 << endl;
+    }
+}
+
+/*****************************************************************************/
 /***********                   D&C tree dot file                   ***********/
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
 void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                          int LRS)
+                          int LRS, bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " [label=\"" << curNode << "\\n["
 		   << firstElem << "," << lastElem << "]\"";
 
-	if		(LRS == 1) dcFile << ", color=turquoise4];\n";
+    if (hasIntfNode)   dcFile << ", color=red];\n";
+	else if (LRS == 1) dcFile << ", color=turquoise4];\n";
 	else if (LRS == 2) dcFile << ", color=lightskyblue];\n";
 	else if (LRS == 3) dcFile << ", color=grey];\n";
 	else			   dcFile << ", shape=circle, color=red];\n";
@@ -232,8 +278,7 @@ void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastE
 	if (nbSepElem > 0) dcFile << "; " << 3*curNode+3 << ";}\n\t";
 	else			   dcFile << ";}\n\t";
 	dcFile << curNode << " [label=\"" << curNode << "\\n[" << firstElem
-		   << "," << lastElem-nbSepElem << "," << lastElem
-		   << "]\", style=rounded];\n";
+		   << "," << lastElem-nbSepElem << "," << lastElem << "]\", style=rounded];\n";
 }
 
 // Close the D&C tree dot file

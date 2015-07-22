@@ -34,6 +34,7 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
 void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
                        int firstSepElem, int lastSepElem, int firstNode, int lastNode,
+                       int nbIntf, int *intfIndex, int *intfNodes,
 #ifdef STATS
                        int curNode, ofstream &dcFile);
 #else
@@ -41,7 +42,8 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
 #endif
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes);
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
+                   int nbIntf, int *intfIndex, int *intfNodes, int rank);
 
 int intf_partitioning (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                        int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf);

@@ -114,6 +114,7 @@ int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstEle
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
 void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
                        int firstSepElem, int lastSepElem, int firstNode, int lastNode,
+                       int nbIntf, int *intfIndex, int *intfNodes,
 #ifdef STATS
                        int curNode, ofstream &dcFile)
 #else
@@ -125,6 +126,22 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
 
+        // Look if current leaf contains at least one node on one interface
+        bool hasIntfNode = false;
+        for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++) {
+            for (int j = 0; j < nbIntf; j++) {
+                for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
+                    int intfNode = intfNodes[k] - 1;
+                    if (elemToNode[i] == intfNode) {
+                        hasIntfNode = true;
+                        break;
+                    }
+                }
+                if (hasIntfNode) break;
+            }
+            if (hasIntfNode) break;
+        }
+
         // Set the last updater of each node
         for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
             int node = nodePerm[elemToNode[i]];
@@ -135,7 +152,9 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
         init_dc_tree (tree, firstSepElem, lastSepElem, 0, firstNode, lastNode, true,
                       true);
         #ifdef STATS
-            fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3);
+            fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3,
+                                 hasIntfNode);
+            count_intf_stats (hasIntfNode);
         #endif
 
         // End of recursion
@@ -166,16 +185,21 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     // Create the separator D&C tree
     tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, globalNbElem,
                    dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, firstNode,
+                   lastNode, 0, curNode, true,
+                   nbIntf, intfIndex, intfNodes
     #ifdef STATS
-                   lastNode, 0, curNode, true, dcFile, -1);
+                   //lastNode, 0, curNode, true, dcFile, -1);
+                   , dcFile, -1);
     #else
-                   lastNode, 0, curNode, true);
+                   //lastNode, 0, curNode, true);
+                   );
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
+                   int nbIntf, int *intfIndex, int *intfNodes, int rank)
 {
     // Fortran to C elemToNode conversion
     #ifdef OMP
@@ -210,7 +234,8 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 
     // Create D&C tree dot file
     #ifdef STATS
-        string fileName = "dcTree_"+to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
+        string fileName = "dcTree_" + to_string ((long long)rank) + "_" +
+                           to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
         ofstream dcFile (fileName, ios::out | ios::trunc);
         init_dc_file (dcFile, nbPart);
     #endif
@@ -221,10 +246,12 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 		#pragma omp single nowait
     #endif
     tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
-                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
+                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false,
+                   nbIntf, intfIndex, intfNodes
     #ifdef STATS
                    , dcFile, -1);
     	close_dc_file (dcFile);
+        store_intf_stats (nbElem, rank);
     	dc_stat ();
     #else
                    );
