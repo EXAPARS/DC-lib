@@ -76,7 +76,7 @@ void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int last
 
 // Fill the nodes of the D&C tree dot file
 void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                         int nbSepElem);
+                         int nbSepElem, bool hasIntfNode);
 
 // Close the D&C tree dot file
 void close_dc_file (ofstream &dcFile);

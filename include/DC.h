@@ -26,6 +26,9 @@
 // D&C tree structure
 typedef struct tree_s {
     int *ownedNodes;
+    #ifdef MULTI_THREADED_COMM
+        int *intfIndex, *intfNodes;
+    #endif
     int nbOwnedNodes,
         firstElem, lastElem, lastSep,
         firstNode, lastNode,

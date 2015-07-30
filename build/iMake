@@ -36,6 +36,7 @@ DISTRI=0
 SHARED=0
 VECTO=0
 ARCHI=0
+BULK=0
 TREE=0
 STATS=0
 DEBUG=0
@@ -68,6 +69,8 @@ for i in $@; do
         ARCHI="AVX"
     elif [[ $i == "mic" ]]; then
         ARCHI="MIC"
+    elif [[ $i == "bulk" ]]; then
+        BULK=1
     elif [[ $i == "tree" ]]; then
         TREE=1
     elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
@@ -113,24 +116,26 @@ if [[ $ARCHI == "mic" ]]; then
     if [[ $TREE == 1 ]]; then
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DVECTO=$VECTO -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
-              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG
+              -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 else
     if [[ $TREE == 1 ]]; then
         cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DVECTO=$VECTO -DARCHI=$ARCHI -DTREE=$TREE -DSTATS=$STATS \
+              -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     else
         cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
-              -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG
+              -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 fi

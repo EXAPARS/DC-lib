@@ -32,18 +32,18 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
                       int lastSepElem, int dimElem);
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
-                       int firstSepElem, int lastSepElem, int firstNode, int lastNode,
-                       int nbIntf, int *intfIndex, int *intfNodes,
+void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
+                       int globalNbElem, int dimElem, int firstSepElem,
+                       int lastSepElem, int firstNode, int lastNode, int nbIntf,
 #ifdef STATS
-                       int curNode, ofstream &dcFile);
+                       int curNode, int commDepth, int curDepth, ofstream &dcFile);
 #else
-                       int curNode);
+                       int curNode, int commDepth, int curDepth);
 #endif
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
-                   int nbIntf, int *intfIndex, int *intfNodes, int rank);
+void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
+                   int dimElem, int nbNodes, int nbIntf, int rank);
 
 int intf_partitioning (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                        int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf);

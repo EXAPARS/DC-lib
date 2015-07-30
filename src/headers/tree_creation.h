@@ -30,8 +30,10 @@ void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode,int cu
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode);
 
 // Initialize a node of the D&C tree
-void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
-                   int firstNode, int lastNode, bool isSep, bool isLeaf);
+void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
+                   int firstElem, int lastElem, int nbSepElem, int dimElem,
+                   int firstNode, int lastNode, int nbIntf, int commDepth,
+                   int curDepth, bool isSep, bool isLeaf, bool *hasIntfNode);
 
 // Create element partition & count left & separator elements
 void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem,
@@ -41,14 +43,14 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 // Create the D&C tree and the element permutation, and compute the intervals of nodes
 // and elements at each node of the tree
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                    int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
-                    int lastPart, int firstElem, int lastElem, int firstNode,
-                    int lastNode, int sepOffset, int curNode, bool isSep,
-                    int nbIntf, int *intfIndex, int *intfNodes
+                    int *nodePartSize, int *intfIndex, int *intfNodes,
+                    int globalNbElem, int dimElem, int firstPart, int lastPart,
+                    int firstElem, int lastElem, int firstNode, int lastNode,
+                    int sepOffset, int nbIntf, int curNode, int commDepth,
 #ifdef STATS
-                    , ofstream &dcFile, int LRS);
+                    int curDepth, bool isSep, ofstream &dcFile, int LRS);
 #else
-                    );
+                    int curDepth, bool isSep);
 #endif
 
 // Create the D&C tree and the permutations

@@ -272,13 +272,15 @@ void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int last
 
 // Fill the nodes of the D&C tree dot file
 void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                         int nbSepElem)
+                         int nbSepElem, bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " -> {" << 3*curNode+1 << "; " << 3*curNode+2;
 	if (nbSepElem > 0) dcFile << "; " << 3*curNode+3 << ";}\n\t";
 	else			   dcFile << ";}\n\t";
 	dcFile << curNode << " [label=\"" << curNode << "\\n[" << firstElem
-		   << "," << lastElem-nbSepElem << "," << lastElem << "]\", style=rounded];\n";
+		   << "," << lastElem-nbSepElem << "," << lastElem << "]\", style=rounded";
+    if (hasIntfNode) dcFile << ", color=red];\n";
+    else             dcFile << "];\n";
 }
 
 // Close the D&C tree dot file

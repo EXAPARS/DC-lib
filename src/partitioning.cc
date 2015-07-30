@@ -16,8 +16,8 @@
 
 #ifdef TREE_CREATION
 
-#include <string.h>
-#include <math.h>
+#include <cstring>
+#include <cmath>
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
@@ -112,13 +112,13 @@ int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstEle
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
-                       int firstSepElem, int lastSepElem, int firstNode, int lastNode,
-                       int nbIntf, int *intfIndex, int *intfNodes,
+void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
+                       int globalNbElem, int dimElem, int firstSepElem,
+                       int lastSepElem, int firstNode, int lastNode, int nbIntf,
 #ifdef STATS
-                       int curNode, ofstream &dcFile)
+                       int curNode, int commDepth, int curDepth, ofstream &dcFile)
 #else
-                       int curNode)
+                       int curNode, int commDepth, int curDepth)
 #endif
 {
     // If there is not enough element in the separator
@@ -126,21 +126,11 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
 
-        // Look if current leaf contains at least one node on one interface
+        // Initialize the leaf
         bool hasIntfNode = false;
-        for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++) {
-            for (int j = 0; j < nbIntf; j++) {
-                for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
-                    int intfNode = intfNodes[k] - 1;
-                    if (elemToNode[i] == intfNode) {
-                        hasIntfNode = true;
-                        break;
-                    }
-                }
-                if (hasIntfNode) break;
-            }
-            if (hasIntfNode) break;
-        }
+        init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstSepElem,
+                      lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, commDepth,
+                      curDepth, true, true, &hasIntfNode);
 
         // Set the last updater of each node
         for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
@@ -148,9 +138,6 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
             nodeOwner[node] = curNode;
         }
 
-        // Initialize the leaf
-        init_dc_tree (tree, firstSepElem, lastSepElem, 0, firstNode, lastNode, true,
-                      true);
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3,
                                  hasIntfNode);
@@ -183,23 +170,20 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, globalNbElem,
-                   dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, firstNode,
-                   lastNode, 0, curNode, true,
-                   nbIntf, intfIndex, intfNodes
+    tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, intfIndex,
+                   intfNodes, globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
+                   lastSepElem, firstNode, lastNode, 0, nbIntf, curNode, commDepth,
     #ifdef STATS
-                   //lastNode, 0, curNode, true, dcFile, -1);
-                   , dcFile, -1);
+                   curDepth, true, dcFile, -1);
     #else
-                   //lastNode, 0, curNode, true);
-                   );
+                   curDepth, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
-                   int nbIntf, int *intfIndex, int *intfNodes, int rank)
+void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
+                   int dimElem, int nbNodes, int nbIntf, int rank)
 {
     // Fortran to C elemToNode conversion
     #ifdef OMP
@@ -213,6 +197,7 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
 
     // Configure METIS & compute the node partitioning of the mesh
     int nbPart = ceil (nbElem / (double)MAX_ELEM_PER_PART);
+    int commDepth = ceil ((double)log2 (nbPart) / 2.);
 	int constraint = 1, objVal;
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
@@ -245,18 +230,20 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
 		#pragma omp parallel
 		#pragma omp single nowait
     #endif
-    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
-                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false,
-                   nbIntf, intfIndex, intfNodes
+    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, intfIndex,
+                   intfNodes, nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1,
     #ifdef STATS
-                   , dcFile, -1);
+                   0, nbIntf, 0, commDepth, 0, false, dcFile, -1);
+    #else
+                   0, nbIntf, 0, commDepth, 0, false);
+    #endif
+    delete[] nodePartSize, delete[] nodePart;
+
+    #ifdef STATS
     	close_dc_file (dcFile);
         store_intf_stats (nbElem, rank);
     	dc_stat ();
-    #else
-                   );
     #endif
-    delete[] nodePartSize, delete[] nodePart;
 
 	// C to Fortran elemToNode conversion
     #ifdef OMP
@@ -269,6 +256,8 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes,
 	}
 }
 /*
+// Store the elements & the nodes on the interface at the beginning and create a
+// permutation array for each of them
 int intf_partitioning (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                        int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf)
 {
