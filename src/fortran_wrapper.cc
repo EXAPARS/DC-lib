@@ -31,9 +31,11 @@ double dc_get_time_ ()
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
 void dc_tree_traversal_ (void (*userSeqFct) (void *, DCargs_t *),
-                         void (*userVecFct) (void *, DCargs_t *), void *userArgs)
+                         void (*userVecFct) (void *, DCargs_t *),
+                         void (*userCommFct) (void *),
+                         void *userArgs, void *userCommArgs)
 {
-    DC_tree_traversal (userSeqFct, userVecFct, userArgs);
+    DC_tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs, userCommArgs);
 }
 
 // Permute "tab" 2D array of double using node permutation

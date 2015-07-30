@@ -26,7 +26,8 @@ extern tree_t *treeHead;
 // Follow the D&C tree to execute the given function in parallel
 void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
                      void (*userVecFct) (void *, DCargs_t *),
-                     void *userArgs, tree_t &tree)
+                     void (*userCommFct) (void *),
+                     void *userArgs, void *userCommArgs, tree_t &tree)
 {
     // If current node is a leaf, call the appropriate function
     if (tree.left == nullptr && tree.right == nullptr) {
@@ -57,38 +58,60 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
             DCargs.lastElem  = tree.lastElem;
             userSeqFct (userArgs, &DCargs);
         #endif
+
+        // Call user communication function
+        #ifdef MULTI_THREADED_COMM
+            if (tree.intfIndex != nullptr) {
+                userCommFct (userCommArgs);
+            }
+        #endif
     }
     else {
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default(shared)
-            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
+            tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
+                            userCommArgs, *tree.right);
             #pragma omp task default(shared)
-            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
+            tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
+                            userCommArgs, *tree.left);
             // Synchronization
             #pragma omp taskwait
         #elif CILK
             // Left & right recursion
             cilk_spawn
-            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.right);
-            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.left);
+            tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
+                            userCommArgs, *tree.right);
+            tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
+                            userCommArgs, *tree.left);
             // Synchronization
             cilk_sync;
         #endif
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
-            tree_traversal (userSeqFct, userVecFct, userArgs, *tree.sep);
+            tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
+                            userCommArgs, *tree.sep);
         }
+
+        // Call user communication function
+        #ifdef MULTI_THREADED_COMM
+            if (tree.intfIndex != nullptr) {
+                userCommFct (userCommArgs);
+            }
+        #endif
     }
 }
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
 void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
-                        void (*userVecFct) (void *, DCargs_t *), void *userArgs)
+                        void (*userVecFct) (void *, DCargs_t *),
+                        void (*userCommFct) (void *),
+                        void *userArgs, void *userCommArgs)
 {
     #ifdef OMP
         #pragma omp parallel
         #pragma omp single nowait
     #endif
-    tree_traversal (userSeqFct, userVecFct, userArgs, *treeHead);
+    tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs, userCommArgs,
+                    *treeHead);
 }
