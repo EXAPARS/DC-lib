@@ -32,8 +32,9 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode);
 // Initialize a node of the D&C tree
 void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                    int firstElem, int lastElem, int nbSepElem, int dimElem,
-                   int firstNode, int lastNode, int nbIntf, int commDepth,
-                   int curDepth, bool isSep, bool isLeaf, bool *hasIntfNode);
+                   int firstNode, int lastNode, int nbIntf, int nbBlocks,
+                   int commDepth, int curDepth, bool isSep, bool isLeaf,
+                   bool *hasIntfNode);
 
 // Create element partition & count left & separator elements
 void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem,
@@ -46,16 +47,17 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
                     int *nodePartSize, int *intfIndex, int *intfNodes,
                     int globalNbElem, int dimElem, int firstPart, int lastPart,
                     int firstElem, int lastElem, int firstNode, int lastNode,
-                    int sepOffset, int nbIntf, int curNode, int commDepth,
+                    int sepOffset, int nbIntf, int nbBlocks, int curNode,
+                    int commDepth, int curDepth, bool isSep
 #ifdef STATS
-                    int curDepth, bool isSep, ofstream &dcFile, int LRS);
+                    , ofstream &dcFile, int LRS);
 #else
-                    int curDepth, bool isSep);
+                    );
 #endif
 
 // Create the D&C tree and the permutations
 void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                      int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
-                     int rank);
+                     int nbBlocks, int rank);
 
 #endif

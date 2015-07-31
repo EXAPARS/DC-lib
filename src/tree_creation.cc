@@ -101,20 +101,22 @@ void compute_intervals (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int c
     // If current node is a leaf
     if (tree.left == nullptr && tree.right == nullptr) {
 
-        // Compute the number of nodes owned by current leaf and fill the node list
-        int nbOwnedNodes = 0, ctr = 0;
-        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
-            if (nodeOwner[i] == curNode) nbOwnedNodes++;
-        }
-        tree.nbOwnedNodes = nbOwnedNodes;
-        if (nbOwnedNodes > 0) tree.ownedNodes = new int [nbOwnedNodes];
-        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
-            if (nodeOwner[i] == curNode) {
-                tree.ownedNodes[ctr] = i;
-                ctr++;
+        #ifdef MULTI_THREADED_COMM
+            // Compute the number of nodes owned by current leaf and fill the node list
+            int nbOwnedNodes = 0, ctr = 0;
+            for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+                if (nodeOwner[i] == curNode) nbOwnedNodes++;
             }
-            if (ctr == nbOwnedNodes) break;
-        }
+            tree.nbOwnedNodes = nbOwnedNodes;
+            if (nbOwnedNodes > 0) tree.ownedNodes = new int [nbOwnedNodes];
+            for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+                if (nodeOwner[i] == curNode) {
+                    tree.ownedNodes[ctr] = i;
+                    ctr++;
+                }
+                if (ctr == nbOwnedNodes) break;
+            }
+        #endif
 
         // Get the first and last edges of the leaf if current leaf is not a separator
         if (tree.isSep) {
@@ -167,18 +169,17 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode)
 // Initialize a node of the D&C tree
 void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                    int firstElem, int lastElem, int nbSepElem, int dimElem,
-                   int firstNode, int lastNode, int nbIntf, int commDepth,
-                   int curDepth, bool isSep, bool isLeaf, bool *hasIntfNode)
+                   int firstNode, int lastNode, int nbIntf, int nbBlocks,
+                   int commDepth, int curDepth, bool isSep, bool isLeaf,
+                   bool *hasIntfNode)
 {
-    tree.ownedNodes   = nullptr;
-    tree.nbOwnedNodes = -1;
-    tree.firstElem    = firstElem;
-    tree.lastElem     = lastElem - nbSepElem;
-    tree.lastSep      = lastElem;
-    tree.firstNode    = firstNode;
-    tree.lastNode     = lastNode;
-    tree.firstEdge    = -1;
-    tree.lastEdge     = -1;
+    tree.firstElem = firstElem;
+    tree.lastElem  = lastElem - nbSepElem;
+    tree.lastSep   = lastElem;
+    tree.firstNode = firstNode;
+    tree.lastNode  = lastNode;
+    tree.firstEdge = -1;
+    tree.lastEdge  = -1;
     #ifdef DC_VEC
         tree.vecOffset = 0;
     #endif
@@ -195,19 +196,23 @@ void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes
     }
 
     #ifdef MULTI_THREADED_COMM
-        tree.intfIndex = nullptr;
-        tree.intfNodes = nullptr;
+        tree.intfIndex    = nullptr;
+        tree.intfNodes    = nullptr;
+        tree.ownedNodes   = nullptr;
+        tree.nbOwnedNodes = -1;
 
-        // If current node is a leaf upper or at the communication level or an internal
-        // node at communication level, initialize its interface
-        if ((isLeaf && curDepth <= commDepth) || (!isLeaf && curDepth == commDepth)) {
+        // If there are at least 2 domains and if current node is a leaf upper or at
+        // the communication level or if an internal node is at communication level,
+        // initialize its interface
+        if ((nbBlocks > 1) && (isLeaf && curDepth <= commDepth) ||
+                             (!isLeaf && curDepth == commDepth)) {
             int nbIntfNodes = 0, ctr = 0;
             // Count the number of nodes on the interface
             for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
                 for (int j = 0; j < nbIntf; j++) {
                     for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
-                        int intfNode = intfNodes[k] - 1;
-                        if (elemToNode[i] == intfNode) {
+                        int intfNode = intfNodes[k];
+                        if ((elemToNode[i] + 1) == intfNode) {
                             *hasIntfNode = true;
                             nbIntfNodes++;
                         }
@@ -224,10 +229,10 @@ void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes
                 for (int j = 0; j < nbIntf; j++) {
                     tree.intfIndex[j] = ctr;
                     for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
-                        int intfNode = intfNodes[k] - 1;
+                        int intfNode = intfNodes[k];
                         for (int i = firstElem*dimElem; i < (lastElem+1)*dimElem; i++){
-                            if (elemToNode[i] == intfNode) {
-                                tree.intfNodes[ctr] = intfNode + 1;
+                            if ((elemToNode[i] + 1) == intfNode) {
+                                tree.intfNodes[ctr] = nodePerm[intfNode];
                                 ctr++;
                             }
                         }
@@ -271,11 +276,11 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
                     int *nodePartSize, int *intfIndex, int *intfNodes,
                     int globalNbElem, int dimElem, int firstPart, int lastPart,
                     int firstElem, int lastElem, int firstNode, int lastNode,
-                    int sepOffset, int nbIntf, int curNode, int commDepth,
+                    int sepOffset, int nbIntf, int nbBlocks, int curNode,
 #ifdef STATS
-                    int curDepth, bool isSep, ofstream &dcFile, int LRS)
+                    int commDepth, int curDepth, bool isSep, ofstream &dcFile, int LRS)
 #else
-                    int curDepth, bool isSep)
+                    int commDepth, int curDepth, bool isSep)
 #endif
 {
     // If current node is a leaf
@@ -286,8 +291,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
         // Initialize the leaf
         init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstElem, lastElem, 0,
-                      dimElem, firstNode, lastNode, nbIntf, commDepth, curDepth, isSep,
-                      true, &hasIntfNode);
+                      dimElem, firstNode, lastNode, nbIntf, nbBlocks, commDepth,
+                      curDepth, isSep, true, &hasIntfNode);
 
         // Set the last updater of each node
         if (isSep) {
@@ -361,8 +366,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
     // Initialize current node
     init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstElem, lastElem,
-                  nbSepElem, dimElem, firstNode, lastNode, nbIntf, commDepth, curDepth,
-                  isSep, false, &hasIntfNode);
+                  nbSepElem, dimElem, firstNode, lastNode, nbIntf, nbBlocks, commDepth,
+                  curDepth, isSep, false, &hasIntfNode);
     #ifdef STATS
         fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem,
                             hasIntfNode);
@@ -377,11 +382,11 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePartSize,
                    intfIndex, intfNodes, globalNbElem, dimElem, separator+1, lastPart,
                    firstElem+nbLeftElem, lastElem-nbSepElem, lastNode-nbRightNodes+1,
-                   lastNode, sepOffset+nbLeftElem, nbIntf, 3*curNode+2, commDepth,
+                   lastNode, sepOffset+nbLeftElem, nbIntf, nbBlocks, 3*curNode+2,
     #ifdef STATS
-                   curDepth+1, isSep, dcFile, 2);
+                   commDepth, curDepth+1, isSep, dcFile, 2);
     #else
-                   curDepth+1, isSep);
+                   commDepth, curDepth+1, isSep);
     #endif
     #ifdef OMP
         #pragma omp task default(shared)
@@ -389,11 +394,11 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
                    intfIndex, intfNodes, globalNbElem, dimElem, firstPart, separator,
                    firstElem, firstElem+nbLeftElem-1, firstNode, firstNode+nbLeftNodes
-                   -1, sepOffset, nbIntf, 3*curNode+1, commDepth, curDepth+1, isSep
+                   -1, sepOffset, nbIntf, nbBlocks, 3*curNode+1, commDepth, curDepth+1,
     #ifdef STATS
-                   , dcFile, 1);
+                   isSep, dcFile, 1);
     #else
-                   );
+                   isSep);
     #endif
 
     // Synchronization
@@ -407,10 +412,11 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     if (nbSepElem > 0) {
         sep_partitioning (*tree.sep, elemToNode, intfIndex, intfNodes, globalNbElem,
                           dimElem, lastElem-nbSepElem+1, lastElem, firstNode, lastNode,
+                          nbIntf, nbBlocks, 3*curNode+3, commDepth, curDepth+1
         #ifdef STATS
-                          nbIntf, 3*curNode+3, commDepth, curDepth+1, dcFile);
+                          , dcFile);
         #else
-                          nbIntf, 3*curNode+3, commDepth, curDepth+1);
+                          );
         #endif
     }
 }
@@ -418,7 +424,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 // Create the D&C tree and the permutations
 void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                      int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
-                     int rank)
+                     int nbBlocks, int rank)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -438,7 +444,7 @@ void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNo
 
     // Create the D&C tree & the permutation functions
     partitioning (elemToNode, intfIndex, intfNodes, nbElem, dimElem, nbNodes, nbIntf,
-                  rank);
+                  nbBlocks, rank);
 
     // Vectorial version with coloring of the leaves of the D&C tree
     #ifdef DC_VEC

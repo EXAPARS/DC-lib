@@ -25,12 +25,11 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    int *ownedNodes;
     #ifdef MULTI_THREADED_COMM
-        int *intfIndex, *intfNodes;
+        int *intfIndex, *intfNodes, *ownedNodes;
+        int nbOwnedNodes;
     #endif
-    int nbOwnedNodes,
-        firstElem, lastElem, lastSep,
+    int firstElem, lastElem, lastSep,
         firstNode, lastNode,
         firstEdge, lastEdge;
     #ifdef DC_VEC
@@ -45,9 +44,16 @@ typedef struct DCargs_s {
     int firstElem, lastElem,
         firstNode, lastNode,
         firstEdge, lastEdge,
-        isSep, nbOwnedNodes;
-    int *ownedNodes;
+        isSep;
 } DCargs_t;
+
+#ifdef MULTI_THREADED_COMM
+    // D&C arguments structure for multi-threaded comm
+    typedef struct DCcommArgs_s {
+        int *intfIndex, *intfNodes, *ownedNodes;
+        int nbOwnedNodes;
+    } DCcommArgs_t;
+#endif
 
 typedef struct {
     int *index, *value;
@@ -140,6 +146,6 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode);
 // Create the D&C tree and the permutations
 void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
                      int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
-                     int rank);
+                     int nbBlocks, int rank);
 
 #endif

@@ -115,10 +115,11 @@ int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstEle
 void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                        int globalNbElem, int dimElem, int firstSepElem,
                        int lastSepElem, int firstNode, int lastNode, int nbIntf,
+                       int nbBlocks, int curNode, int commDepth, int curDepth
 #ifdef STATS
-                       int curNode, int commDepth, int curDepth, ofstream &dcFile)
+                       , ofstream &dcFile)
 #else
-                       int curNode, int commDepth, int curDepth)
+                       )
 #endif
 {
     // If there is not enough element in the separator
@@ -129,8 +130,8 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
         // Initialize the leaf
         bool hasIntfNode = false;
         init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstSepElem,
-                      lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, commDepth,
-                      curDepth, true, true, &hasIntfNode);
+                      lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, nbBlocks,
+                      commDepth, curDepth, true, true, &hasIntfNode);
 
         // Set the last updater of each node
         for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
@@ -172,18 +173,18 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
     // Create the separator D&C tree
     tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, intfIndex,
                    intfNodes, globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
-                   lastSepElem, firstNode, lastNode, 0, nbIntf, curNode, commDepth,
+                   lastSepElem, firstNode, lastNode, 0, nbIntf, nbBlocks, curNode,
     #ifdef STATS
-                   curDepth, true, dcFile, -1);
+                   commDepth, curDepth, true, dcFile, -1);
     #else
-                   curDepth, true);
+                   commDepth, curDepth, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
 // Divide & Conquer partitioning
 void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
-                   int dimElem, int nbNodes, int nbIntf, int rank)
+                   int dimElem, int nbNodes, int nbIntf, int nbBlocks, int rank)
 {
     // Fortran to C elemToNode conversion
     #ifdef OMP
@@ -233,9 +234,9 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
     tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, intfIndex,
                    intfNodes, nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1,
     #ifdef STATS
-                   0, nbIntf, 0, commDepth, 0, false, dcFile, -1);
+                   0, nbIntf, nbBlocks, 0, commDepth, 0, false, dcFile, -1);
     #else
-                   0, nbIntf, 0, commDepth, 0, false);
+                   0, nbIntf, nbBlocks, 0, commDepth, 0, false);
     #endif
     delete[] nodePartSize, delete[] nodePart;
 
