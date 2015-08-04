@@ -25,7 +25,7 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    #ifdef MULTI_THREADED_COMM
+    #ifdef MULTITHREADED_COMM
         int *intfIndex, *intfNodes, *ownedNodes;
         int nbOwnedNodes;
     #endif
@@ -47,8 +47,8 @@ typedef struct DCargs_s {
         isSep;
 } DCargs_t;
 
-#ifdef MULTI_THREADED_COMM
-    // D&C arguments structure for multi-threaded comm
+#ifdef MULTITHREADED_COMM
+    // D&C arguments structure for multithreaded comm
     typedef struct DCcommArgs_s {
         int *intfIndex, *intfNodes, *ownedNodes;
         int nbOwnedNodes;

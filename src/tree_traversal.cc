@@ -60,7 +60,7 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         #endif
 
         // Call user communication function
-        #ifdef MULTI_THREADED_COMM
+        #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
                 userCommFct (userCommArgs);
             }
@@ -94,7 +94,7 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         }
 
         // Call user communication function
-        #ifdef MULTI_THREADED_COMM
+        #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
                 userCommFct (userCommArgs);
             }

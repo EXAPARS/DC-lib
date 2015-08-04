@@ -33,7 +33,7 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode);
 void init_dc_tree (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                    int firstElem, int lastElem, int nbSepElem, int dimElem,
                    int firstNode, int lastNode, int nbIntf, int nbBlocks,
-                   int commDepth, int curDepth, bool isSep, bool isLeaf,
+                   int commLevel, int curLevel, bool isSep, bool isLeaf,
                    bool *hasIntfNode);
 
 // Create element partition & count left & separator elements
@@ -48,7 +48,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
                     int globalNbElem, int dimElem, int firstPart, int lastPart,
                     int firstElem, int lastElem, int firstNode, int lastNode,
                     int sepOffset, int nbIntf, int nbBlocks, int curNode,
-                    int commDepth, int curDepth, bool isSep
+                    int commLevel, int curLevel, bool isSep
 #ifdef STATS
                     , ofstream &dcFile, int LRS);
 #else

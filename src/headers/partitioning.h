@@ -35,7 +35,7 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                        int globalNbElem, int dimElem, int firstSepElem,
                        int lastSepElem, int firstNode, int lastNode, int nbIntf,
-                       int nbBlocks, int curNode, int commDepth, int curDepth
+                       int nbBlocks, int curNode, int commLevel, int curLevel
 #ifdef STATS
                        , ofstream &dcFile);
 #else

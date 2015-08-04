@@ -115,7 +115,7 @@ int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstEle
 void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
                        int globalNbElem, int dimElem, int firstSepElem,
                        int lastSepElem, int firstNode, int lastNode, int nbIntf,
-                       int nbBlocks, int curNode, int commDepth, int curDepth
+                       int nbBlocks, int curNode, int commLevel, int curLevel
 #ifdef STATS
                        , ofstream &dcFile)
 #else
@@ -131,7 +131,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
         bool hasIntfNode = false;
         init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstSepElem,
                       lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, nbBlocks,
-                      commDepth, curDepth, true, true, &hasIntfNode);
+                      commLevel, curLevel, true, true, &hasIntfNode);
 
         // Set the last updater of each node
         for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
@@ -175,9 +175,9 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
                    intfNodes, globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
                    lastSepElem, firstNode, lastNode, 0, nbIntf, nbBlocks, curNode,
     #ifdef STATS
-                   commDepth, curDepth, true, dcFile, -1);
+                   commLevel, curLevel, true, dcFile, -1);
     #else
-                   commDepth, curDepth, true);
+                   commLevel, curLevel, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
@@ -198,7 +198,7 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
 
     // Configure METIS & compute the node partitioning of the mesh
     int nbPart = ceil (nbElem / (double)MAX_ELEM_PER_PART);
-    int commDepth = ceil ((double)log2 (nbPart) / 2.);
+    int commLevel = ceil ((double)log2 (nbPart) / 2.);
 	int constraint = 1, objVal;
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
@@ -234,9 +234,9 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
     tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, intfIndex,
                    intfNodes, nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1,
     #ifdef STATS
-                   0, nbIntf, nbBlocks, 0, commDepth, 0, false, dcFile, -1);
+                   0, nbIntf, nbBlocks, 0, commLevel, 0, false, dcFile, -1);
     #else
-                   0, nbIntf, nbBlocks, 0, commDepth, 0, false);
+                   0, nbIntf, nbBlocks, 0, commLevel, 0, false);
     #endif
     delete[] nodePartSize, delete[] nodePart;
 
