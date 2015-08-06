@@ -25,10 +25,8 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    #ifdef MULTITHREADED_COMM
-        int *intfIndex, *intfNodes, *ownedNodes;
-        int nbOwnedNodes;
-    #endif
+    int *intfIndex, *intfNodes, *ownedNodes;
+    int nbOwnedNodes;
     int firstElem, lastElem, lastSep,
         firstNode, lastNode,
         firstEdge, lastEdge;
@@ -41,6 +39,10 @@ typedef struct tree_s {
 
 // D&C arguments structure
 typedef struct DCargs_s {
+    #ifdef MULTITHREADED_COMM
+        int *ownedNodes;
+        int nbOwnedNodes;
+    #endif
     int firstElem, lastElem,
         firstNode, lastNode,
         firstEdge, lastEdge,
@@ -139,13 +141,11 @@ void DC_read_tree (std::string &treePath, int nbElem, int nbNodes);
 // Store the D&C tree and the permutation functions to a binary file
 void DC_store_tree (std::string &treePath, int nbElem, int nbNodes);
 
-// Wrapper used to get the root of the D&C tree before computing the edge intervals
-// for CSR reset
-void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode);
+// Wrapper used to get the root of the D&C tree before calling the real tree finalize
+void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                       int *intfNodes, int dimElem, int nbBlocks, int nbIntf);
 
 // Create the D&C tree and the permutations
-void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
-                     int nbBlocks, int rank);
+void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank);
 
 #endif

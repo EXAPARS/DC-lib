@@ -39,8 +39,10 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         DCargs.firstEdge    = tree.firstEdge;
         DCargs.lastEdge     = tree.lastEdge;
         DCargs.isSep        = tree.isSep;
-        DCargs.nbOwnedNodes = tree.nbOwnedNodes;
-        DCargs.ownedNodes   = tree.ownedNodes;
+        #ifdef MULTITHREADED_COMM
+            DCargs.nbOwnedNodes = tree.nbOwnedNodes;
+            DCargs.ownedNodes   = tree.ownedNodes;
+        #endif
 
         #ifdef DC_VEC
             // Call user vectorial function on full colors

@@ -84,20 +84,19 @@ void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes)
 
 #ifdef TREE_CREATION
 
-// Wrapper used to get the root of the D&C tree before computing the edge intervals
-// for CSR reset
-void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode)
+// Wrapper used to get the root of the D&C tree before calling the real tree finalize
+void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                        int *intfNodes, int *dimElem, int *nbBlocks, int *nbIntf)
 {
-    DC_finalize_tree (nodeToNodeRow, elemToNode);
+    DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, *dimElem,
+                      *nbBlocks, *nbIntf);
 }
 
 // Create the D&C tree and the permutations
-void dc_create_tree_ (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                      int *nbElem, int *dimElem, int *nbNodes, int *dimNode,
-                      int *nbIntf, int *nbBlocks, int *rank)
+void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,
+                      int *rank)
 {
-    DC_create_tree (coord, elemToNode, intfIndex, intfNodes, *nbElem, *dimElem,
-                    *nbNodes, *dimNode, *nbIntf, *nbBlocks, *rank);
+    DC_create_tree (elemToNode, *nbElem, *dimElem, *nbNodes, *rank);
 }
 
 #endif

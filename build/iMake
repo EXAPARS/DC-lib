@@ -123,7 +123,7 @@ if [[ $ARCHI == "mic" ]]; then
     else
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
               -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
-              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG
+              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG \
               -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
@@ -135,7 +135,7 @@ else
               . -G "Unix Makefiles"
     else
         cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
-              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG
+              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG \
               -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi

@@ -30,75 +30,17 @@
 // to the library to another
 tree_t *treeHead = nullptr;
 int *elemPerm = nullptr, *nodePerm = nullptr;
-#ifdef MULTITHREADED_COMM
-    int *nodeOwner = nullptr;
-#endif
+int commLevel;
 
 #ifdef TREE_CREATION
 
 // Mutex to avoid race condition in merge permutations
 pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
-/*
-// Split the D&C tree into two D&C trees. One for the interfaces, the other for the
-// inner domain
-bool intf_tree_extraction ()
-{
-    // Look if current D&C node contains at least one node on one interface
-    bool hasIntfNode = false;
-    for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
-        for (int j = 0; j < nbIntf; j++) {
-            for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
-                int intfNode = intfNodes[k];
-                if (elemToNode[i] == intfNode) {
-                    hasIntfNode = true;
-                    break;
-                }
-            }
-            if (hasIntfNode) break;
-        }
-        if (hasIntfNode) break;
-    }
-
-    // If current node is a leaf
-    if (tree.left == nullptr && tree.right == nullptr) {
-        // If leaf contains interface node(s)
-        if (hasIntfNode) {
-            // new feuille in DC intf tree containing only current leaf
-        }
-    }
-    else {
-        bool leftHasIntfNode, rightHasIntfNode, sepHasIntfNode = false;
-
-        // Left & right recursion
-        cilk_spawn
-        rightHasIntfNode = intf_tree_creation (*tree.right);
-        leftHasIntfNode  = intf_tree_creation (*tree.left);
-
-        // Synchronization
-        cilk_sync;
-
-        // Separator recursion, if it is not empty
-        if (tree.sep != nullptr) {
-            sepHasIntfNode = intf_tree_creation (*tree.sep);
-        }
-
-        // If both left & right sons have interface node(s)
-        if (leftHasIntfNode && rightHasIntfNode) {
-            // new feuille in DC intf tree containing only current node
-        }
-        // If exclusively left or right son has interface node(s)
-        if ((leftHasIntfNode && !rightHasIntfNode) ||
-           (!leftHasIntfNode &&  rightHasIntfNode)) {
-            // new feuille in DC intf tree containing current node & the left or right
-        }
-    }
-
-    return hasIntfNode;
-}
-*/
-
 #ifdef MULTITHREADED_COMM
+
+// List containing the last updater of each node
+int *nodeOwner = nullptr;
 
 // Determine if nodeID is a descendant of current node
 bool isDescendant (int curNode, int nodeID)
@@ -111,9 +53,9 @@ bool isDescendant (int curNode, int nodeID)
 }
 
 // Initialize D&C tree interface for multithreaded communication
-void create_multithreaded_intf (int *elemToNode, int *intfIndex, int *intfNodes,
-                                int dimElem, int nbIntf, int nbBlocks, int curNode,
-                                int commLevel, int curLevel, bool isLeaf)
+void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
+                                int *intfNodes, int dimElem, int nbIntf, int nbBlocks,
+                                int curNode, int curLevel, bool isLeaf)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -123,7 +65,7 @@ void create_multithreaded_intf (int *elemToNode, int *intfIndex, int *intfNodes,
 
         // Run through all its nodes
         int nbIntfNodes = 0, ctr = 0;
-        for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
+        for (int i = tree.firstElem * dimElem; i < (tree.lastElem+1) * dimElem; i++) {
             int node = elemToNode[i] - 1;
 
             // Check if nodes are owned by a descendant of current D&C node
@@ -149,7 +91,7 @@ void create_multithreaded_intf (int *elemToNode, int *intfIndex, int *intfNodes,
             tree.intfIndex[i] = ctr;
 
             // Run through all nodes accessed by current D&C node
-            for (int j = firstElem * dimElem; j < (lastElem+1) * dimElem; j++) {
+            for (int j = tree.firstElem*dimElem; j < (tree.lastElem+1)*dimElem; j++) {
                 int node = elemToNode[j] - 1;
 
                 // Check if nodes are owned a descendant of current D&C node
@@ -173,6 +115,7 @@ void create_multithreaded_intf (int *elemToNode, int *intfIndex, int *intfNodes,
     if (isLeaf && curLevel <= commLevel) {
 
         // Run through all its owned nodes
+        int nbIntfNodes = 0, ctr = 0;
         for (int i = 0; i < tree.nbOwnedNodes; i++) {
             int node = tree.ownedNodes[i];
 
@@ -213,13 +156,12 @@ void create_multithreaded_intf (int *elemToNode, int *intfIndex, int *intfNodes,
 }
 
 // Compute the number of nodes owned by current leaf and fill the list
-void create_owned_nodes_list (tree_t &tree, int curNode)
+void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int curNode)
 {
-
     // Count the number of owned nodes
     int nbOwnedNodes = 0, ctr = 0;
     if (tree.isSep) {
-        for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
+        for (int i = tree.firstElem * dimElem; i < (tree.lastElem+1) * dimElem; i++) {
             int node = elemToNode[i] - 1;
             if (nodeOwner[node] == curNode) nbOwnedNodes++;
         }
@@ -234,7 +176,7 @@ void create_owned_nodes_list (tree_t &tree, int curNode)
     // Allocate and initialize the list of owned nodes
     if (nbOwnedNodes > 0) tree.ownedNodes = new int [nbOwnedNodes];
     if (tree.isSep) {
-        for (int i = firstElem * dimElem; i < (lastElem+1) * dimElem; i++) {
+        for (int i = tree.firstElem * dimElem; i < (tree.lastElem+1) * dimElem; i++) {
             int node = elemToNode[i] - 1;
             if (nodeOwner[node] == curNode) {
                 tree.ownedNodes[ctr] = node;
@@ -258,7 +200,9 @@ void create_owned_nodes_list (tree_t &tree, int curNode)
 
 // Compute the edge interval, the list of nodes owned by each leaf of the D&C tree,
 // and the interface for multithreaded communication
-void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int curNode)
+void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                    int *intfNodes, int dimElem, int nbBlocks, int nbIntf, int curNode,
+                    int curLevel)
 {
     // If current node is a leaf
     if (tree.left == nullptr && tree.right == nullptr) {
@@ -277,51 +221,62 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int curNo
 
         #ifdef MULTITHREADED_COMM
             // Create the list of nodes last updated by current D&C leaf
-            create_owned_nodes_list (tree, curNode);
+            create_owned_nodes_list (tree, elemToNode, dimElem, curNode);
 
             // Create the interface of current D&C node
-            create_multithreaded_intf (elemToNode, intfIndex, intfNodes, dimElem,
-                                       nbIntf, nbBlocks, commLevel, curLevel, true);
+            create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes, dimElem,
+                                       nbIntf, nbBlocks, curNode, curLevel, true);
         #endif
     }
     else {
         #ifdef MULTITHREADED_COMM
             // Create the interface of current D&C node
-            create_multithreaded_intf (elemToNode, intfIndex, intfNodes, dimElem,
-                                       nbIntf, nbBlocks, commLevel, curLevel, false);
+            create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes, dimElem,
+                                       nbIntf, nbBlocks, curNode, curLevel, false);
         #endif
 
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default (shared)
-            tree_finalize (*tree.right, nodeToNodeRow, elemToNode, 3*curNode+2);
+            tree_finalize (*tree.right, nodeToNodeRow, elemToNode, intfIndex,
+                           intfNodes, dimElem, nbBlocks, nbIntf, 3*curNode+2,
+                           curLevel+1);
             #pragma omp task default (shared)
-            tree_finalize (*tree.left, nodeToNodeRow, elemToNode, 3*curNode+1);
+            tree_finalize (*tree.left, nodeToNodeRow, elemToNode, intfIndex,
+                           intfNodes, dimElem, nbBlocks, nbIntf, 3*curNode+1,
+                           curLevel+1);
             // Synchronization
             #pragma omp taskwait
         #elif CILK
             // Left & right recursion
             cilk_spawn
-            tree_finalize (*tree.right, nodeToNodeRow, elemToNode, 3*curNode+2);
-            tree_finalize (*tree.left, nodeToNodeRow, elemToNode, 3*curNode+1);
+            tree_finalize (*tree.right, nodeToNodeRow, elemToNode, intfIndex,
+                           intfNodes, dimElem, nbBlocks, nbIntf, 3*curNode+2,
+                           curLevel+1);
+            tree_finalize (*tree.left, nodeToNodeRow, elemToNode, intfIndex,
+                           intfNodes, dimElem, nbBlocks, nbIntf, 3*curNode+1,
+                           curLevel+1);
             // Synchronization
             cilk_sync;
         #endif
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
-            tree_finalize (*tree.sep, nodeToNodeRow, elemToNode, 3*curNode+3);
+            tree_finalize (*tree.sep, nodeToNodeRow, elemToNode, intfIndex, intfNodes,
+                           dimElem, nbBlocks, nbIntf, 3*curNode+3, curLevel+1);
         }
     }
 }
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
-void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode)
+void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                       int *intfNodes, int dimElem, int nbBlocks, int nbIntf)
 {
     #ifdef OMP
         #pragma omp parallel
         #pragma omp single nowait
     #endif
-    tree_finalize (*treeHead, nodeToNodeRow, elemToNode, 0);
+    tree_finalize (*treeHead, nodeToNodeRow, elemToNode, intfIndex, intfNodes, dimElem,
+                   nbBlocks, nbIntf, 0, 0);
 
     #ifdef MULTITHREADED_COMM
         delete[] nodeOwner;
@@ -363,7 +318,7 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 
 #ifdef MULTITHREADED_COMM
 // Set the last updater of each node. The owners are the closer leaves to the root.
-void init_node_owner (int *elemToNode, int firstElem, int lastElem, int dimElem,
+void fill_node_owner (int *elemToNode, int firstElem, int lastElem, int dimElem,
                       int firstNode, int lastNode, int curNode, bool isSep)
 {
     // MUTEX on nodeOwner ???
@@ -378,6 +333,20 @@ void init_node_owner (int *elemToNode, int firstElem, int lastElem, int dimElem,
         for (int i = firstNode; i <= lastNode; i++) {
             nodeOwner[i] = curNode;
         }
+    }
+}
+
+// Initialize the owner of the nodes to MAX_INT (lower is owner)
+void init_node_owner (int nbNodes)
+{
+    nodeOwner = new int [nbNodes];
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbNodes; i++) {
+    #elif CILK
+        cilk_for (int i = 0; i < nbNodes; i++) {
+    #endif
+        nodeOwner[i] = INT_MAX;
     }
 }
 #endif
@@ -411,32 +380,28 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 // Create the D&C tree and the element permutation, and compute the intervals of nodes
 // and elements at each node of the tree
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
-                    int *nodePartSize, int *intfIndex, int *intfNodes,
-                    int globalNbElem, int dimElem, int firstPart, int lastPart,
-                    int firstElem, int lastElem, int firstNode, int lastNode,
-                    int sepOffset, int nbIntf, int nbBlocks, int curNode,
+                    int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
+                    int lastPart, int firstElem, int lastElem, int firstNode,
+                    int lastNode, int sepOffset, int curNode, bool isSep
 #ifdef STATS
-                    int commLevel, int curLevel, bool isSep, ofstream &dcFile, int LRS)
+                    , ofstream &dcFile, int LRS)
 #else
-                    int commLevel, int curLevel, bool isSep)
+                    )
 #endif
 {
     // If current node is a leaf
     int nbPart = lastPart - firstPart + 1;
     int localNbElem = lastElem - firstElem + 1;
-    bool hasIntfNode = false;
     if (nbPart < 2 || localNbElem <= MAX_ELEM_PER_PART) {
 
         #ifdef MULTITHREADED_COMM
             // Set the node accessed by current D&C leaf
-            init_node_owner (elemToNode, firstElem, lastElem, dimElem, firstNode,
-                             lastNode, curNode, isSep)
+            fill_node_owner (elemToNode, firstElem, lastElem, dimElem, firstNode,
+                             lastNode, curNode, isSep);
         #endif
 
         // Initialize the leaf
-        init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstElem, lastElem, 0,
-                      dimElem, firstNode, lastNode, nbIntf, nbBlocks, commLevel,
-                      curLevel, isSep, true, &hasIntfNode);
+        init_dc_tree (tree, firstElem, lastElem, 0, firstNode, lastNode, isSep, true);
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstElem, lastElem, LRS,
                                  hasIntfNode);
@@ -495,9 +460,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     delete[] localElemPerm;
 
     // Initialize current node
-    init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstElem, lastElem,
-                  nbSepElem, dimElem, firstNode, lastNode, nbIntf, nbBlocks, commLevel,
-                  curLevel, isSep, false, &hasIntfNode);
+    init_dc_tree (tree, firstElem, lastElem, nbSepElem, firstNode, lastNode, isSep,
+                  false);
     #ifdef STATS
         fill_dc_file_nodes (dcFile, curNode, firstElem, lastElem, nbSepElem,
                             hasIntfNode);
@@ -510,25 +474,23 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
         cilk_spawn
     #endif
     tree_creation (*tree.right, elemToNode, sepToNode, nodePart, nodePartSize,
-                   intfIndex, intfNodes, globalNbElem, dimElem, separator+1, lastPart,
-                   firstElem+nbLeftElem, lastElem-nbSepElem, lastNode-nbRightNodes+1,
-                   lastNode, sepOffset+nbLeftElem, nbIntf, nbBlocks, 3*curNode+2,
+                   globalNbElem, dimElem, separator+1, lastPart, firstElem+nbLeftElem,
+                   lastElem-nbSepElem, lastNode-nbRightNodes+1, lastNode, sepOffset+
     #ifdef STATS
-                   commLevel, curLevel+1, isSep, dcFile, 2);
+                   nbLeftElem, 3*curNode+2, isSep, dcFile, 2);
     #else
-                   commLevel, curLevel+1, isSep);
+                   nbLeftElem, 3*curNode+2, isSep);
     #endif
     #ifdef OMP
         #pragma omp task default(shared)
     #endif
     tree_creation (*tree.left, elemToNode, sepToNode, nodePart, nodePartSize,
-                   intfIndex, intfNodes, globalNbElem, dimElem, firstPart, separator,
-                   firstElem, firstElem+nbLeftElem-1, firstNode, firstNode+nbLeftNodes
-                   -1, sepOffset, nbIntf, nbBlocks, 3*curNode+1, commLevel, curLevel+1,
+                   globalNbElem, dimElem, firstPart, separator, firstElem, firstElem+
+                   nbLeftElem-1, firstNode, firstNode+nbLeftNodes-1, sepOffset,
     #ifdef STATS
-                   isSep, dcFile, 1);
+                   3*curNode+1, isSep, dcFile, 1);
     #else
-                   isSep);
+                   3*curNode+1, isSep);
     #endif
 
     // Synchronization
@@ -540,9 +502,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 
     // D&C partitioning of separator elements
     if (nbSepElem > 0) {
-        sep_partitioning (*tree.sep, elemToNode, intfIndex, intfNodes, globalNbElem,
-                          dimElem, lastElem-nbSepElem+1, lastElem, firstNode, lastNode,
-                          nbIntf, nbBlocks, 3*curNode+3, commLevel, curLevel+1
+        sep_partitioning (*tree.sep, elemToNode, globalNbElem, dimElem, lastElem-
+                          nbSepElem+1, lastElem, firstNode, lastNode, 3*curNode+3
         #ifdef STATS
                           , dcFile);
         #else
@@ -551,26 +512,8 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
     }
 }
 
-#ifdef MULTITHREADED_COMM
-// Initialize the owner of the nodes to MAX_INT (lower is owner)
-void init_node_owner (int nbNodes)
-{
-    nodeOwner = new int [nbNodes];
-    #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 0; i < nbNodes; i++) {
-    #elif CILK
-        cilk_for (int i = 0; i < nbNodes; i++) {
-    #endif
-        nodeOwner[i] = INT_MAX;
-    }
-}
-#endif
-
 // Create the D&C tree and the permutations
-void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                     int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf,
-                     int nbBlocks, int rank)
+void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -583,8 +526,7 @@ void DC_create_tree (double *coord, int *elemToNode, int *intfIndex, int *intfNo
     #endif
 
     // Create the D&C tree & the permutation functions
-    partitioning (elemToNode, intfIndex, intfNodes, nbElem, dimElem, nbNodes, nbIntf,
-                  nbBlocks, rank);
+    partitioning (elemToNode, nbElem, dimElem, nbNodes, rank);
 
     // Vectorial version with coloring of the leaves of the D&C tree
     #ifdef DC_VEC

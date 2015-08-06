@@ -86,13 +86,13 @@ void mesh_to_nodal (int *graphIndex, int *graphValue, int *elemToNode, int nbEle
 
 // Create local elemToNode array containing elements indexed contiguously from 0 to
 // nbElem and return the number of nodes accessed
-int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstElem,
-                             int lastElem, int dimElem)
+int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
+                      int lastSepElem, int dimElem)
 {
     int nbNodes = 0;
-    int *tmp = new int [(lastElem - firstElem + 1) * dimElem];
+    int *tmp = new int [(lastSepElem - firstSepElem + 1) * dimElem];
 
-    for (int i = firstElem * dimElem, j = 0; i < (lastElem+1)*dimElem; i++, j++) {
+    for (int i = firstSepElem*dimElem, j = 0; i < (lastSepElem+1)*dimElem; i++, j++) {
         int newNode = 0, oldNode = elemToNode[i];
         bool isNew = true;
         for (newNode = 0; newNode < nbNodes; newNode++) {
@@ -105,21 +105,19 @@ int create_local_elemToNode (int *localElemToNode, int *elemToNode, int firstEle
             tmp[nbNodes] = oldNode;
             nbNodes++;
         }
-        localElemToNode[j] = newNode;
+        sepToNode[j] = newNode;
     }
     delete[] tmp;
     return nbNodes;
 }
 
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
-void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfNodes,
-                       int globalNbElem, int dimElem, int firstSepElem,
-                       int lastSepElem, int firstNode, int lastNode, int nbIntf,
-                       int nbBlocks, int curNode, int commLevel, int curLevel
+void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
+                       int firstSepElem, int lastSepElem, int firstNode, int lastNode,
 #ifdef STATS
-                       , ofstream &dcFile)
+                       int curNode, ofstream &dcFile)
 #else
-                       )
+                       int curNode)
 #endif
 {
     // If there is not enough element in the separator
@@ -129,15 +127,13 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
 
         #ifdef MULTITHREADED_COMM
             // Set the node accessed by current D&C leaf
-            init_node_owner (elemToNode, firstSepElem, lastSepElem, dimElem, firstNode,
+            fill_node_owner (elemToNode, firstSepElem, lastSepElem, dimElem, firstNode,
                              lastNode, curNode, true);
         #endif
 
         // Initialize the leaf
-        init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstSepElem,
-                      lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, nbBlocks,
-                      commLevel, curLevel, true, true);
-
+        init_dc_tree (tree, firstSepElem, lastSepElem, 0, firstNode, lastNode, true,
+                      true);
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3,
                                  hasIntfNode);
@@ -150,8 +146,8 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
 
     // Create temporal elemToNode containing the separator elements
     int *sepToNode = new int [nbSepElem * dimElem];
-    int nbSepNodes = create_local_elemToNode (sepToNode, elemToNode, firstSepElem,
-                                              lastSepElem, dimElem);
+    int nbSepNodes = create_sepToNode (sepToNode, elemToNode, firstSepElem,
+                                       lastSepElem, dimElem);
 
     // Configure METIS & compute the node partitioning of the separators
     int constraint = 1, objVal;
@@ -170,20 +166,18 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
     delete[] graphValue, delete[] graphIndex;
 
     // Create the separator D&C tree
-    tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, intfIndex,
-                   intfNodes, globalNbElem, dimElem, 0, nbSepPart-1, firstSepElem,
-                   lastSepElem, firstNode, lastNode, 0, nbIntf, nbBlocks, curNode,
+    tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, globalNbElem,
+                   dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, firstNode,
     #ifdef STATS
-                   commLevel, curLevel, true, dcFile, -1);
+                   lastNode, 0, curNode, true, dcFile, -1);
     #else
-                   commLevel, curLevel, true);
+                   lastNode, 0, curNode, true);
     #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
-                   int dimElem, int nbNodes, int nbIntf, int nbBlocks, int rank)
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank)
 {
     // Fortran to C elemToNode conversion
     #ifdef OMP
@@ -198,10 +192,10 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
     // Configure METIS & compute the node partitioning of the mesh
     int nbPart = ceil (nbElem / (double)MAX_ELEM_PER_PART);
     int commLevel = ceil ((double)log2 (nbPart) / 2.);
-	int constraint = 1, objVal;
+    int constraint = 1, objVal;
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
-	int *nodePart   = new int [nbNodes];
+    int *nodePart   = new int [nbNodes];
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue,
                               nullptr, nullptr, nullptr, &nbPart, nullptr, nullptr,
@@ -230,12 +224,12 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
 		#pragma omp parallel
 		#pragma omp single nowait
     #endif
-    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, intfIndex,
-                   intfNodes, nbElem, dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1,
+    tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
+                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
     #ifdef STATS
-                   0, nbIntf, nbBlocks, 0, commLevel, 0, false, dcFile, -1);
+                   , dcFile, -1);
     #else
-                   0, nbIntf, nbBlocks, 0, commLevel, 0, false);
+                   );
     #endif
     delete[] nodePartSize, delete[] nodePart;
 
@@ -255,49 +249,5 @@ void partitioning (int *elemToNode, int *intfIndex, int *intfNodes, int nbElem,
 	    elemToNode[i]++;
 	}
 }
-/*
-// Store the elements & the nodes on the interface at the beginning and create a
-// permutation array for each of them
-int intf_partitioning (double *coord, int *elemToNode, int *intfIndex, int *intfNodes,
-                       int nbElem, int dimElem, int nbNodes, int dimNode, int nbIntf)
-{
-    // Store the elements on the interfaces at the beginning
-    int *elemIntfPart = new int [nbElem];
-    int nbIntfElem = 0;
-    cilk_for (int i = 0; i < nbElem; i++) elemIntfPart[i] = 1;
-    for (int i = 0; i < nbIntf; i++) {
-        for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            int intfNode = intfNodes[j];
-            for (int k = 0; k < nbElem; k++) {
-                for (int l = 0; l < dimElem; l++) {
-                    if (elemToNode[k*dimElem+l] == intfNode) {
-                        elemIntfPart[k] = 0;
-                        nbIntfElem++;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    DC_create_permutation (elemPerm, elemIntfPart, nbElem, 2);
-    DC_permute_int_2d_array (elemToNode, elemPerm, nbElem, dimElem, 0);
-    delete[] elemIntfPart;
 
-    // Store the nodes on the interfaces at the beginning
-    int *nodeIntfPart = new int [nbNodes];
-    cilk_for (int i = 0; i < nbNodes; i++) nodeIntfPart[i] = 1;
-    for (int i = 0; i < nbIntf; i++) {
-        for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            int intfNode = intfNodes[j] - 1;
-            nodeIntfPart[intfNode] = 0;
-        }
-    }
-    DC_create_permutation (nodePerm, nodeIntfPart, nbNodes, 2);
-    DC_permute_double_2d_array (coord, nbNodes, dimNode);
-    delete[] nodeIntfPart;
-
-    // Return the number of elements on the interface
-    return nbIntfElem;
-}
-*/
 #endif

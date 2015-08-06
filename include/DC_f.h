@@ -54,14 +54,14 @@ extern "C" {
     // Store the D&C tree and the permutation functions to a binary file
     void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes);
 
-    // Wrapper used to get the root of the D&C tree before computing the edge intervals
-    // for CSR reset
-    void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode);
+    // Wrapper used to get the root of the D&C tree before calling the real tree
+    // finalize
+    void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                            int *intfNodes, int *dimElem, int *nbBlocks, int *nbIntf);
 
     // Create the D&C tree and the permutations
-    void dc_create_tree_ (double *coord, int *elemToNode, int *intfIndex,
-                          int *intfNodes, int *nbElem, int *dimElem, int *nbNodes,
-                          int *dimNode, int *nbIntf, int *nbBlocks, int *rank);
+    void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,
+                          int *rank);
 }
 
 #endif
