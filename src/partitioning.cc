@@ -127,17 +127,16 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int *intfIndex, int *intfN
     int nbSepPart = ceil (nbSepElem / (double)MAX_ELEM_PER_PART);
     if (nbSepPart < 2 || nbSepElem <= MAX_ELEM_PER_PART) {
 
+        #ifdef MULTITHREADED_COMM
+            // Set the node accessed by current D&C leaf
+            init_node_owner (elemToNode, firstSepElem, lastSepElem, dimElem, firstNode,
+                             lastNode, curNode, true);
+        #endif
+
         // Initialize the leaf
-        bool hasIntfNode = false;
         init_dc_tree (tree, elemToNode, intfIndex, intfNodes, firstSepElem,
                       lastSepElem, 0, dimElem, firstNode, lastNode, nbIntf, nbBlocks,
-                      commLevel, curLevel, true, true, &hasIntfNode);
-
-        // Set the last updater of each node
-        for (int i = firstSepElem * dimElem; i < (lastSepElem+1) * dimElem; i++){
-            int node = nodePerm[elemToNode[i]];
-            nodeOwner[node] = curNode;
-        }
+                      commLevel, curLevel, true, true);
 
         #ifdef STATS
             fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3,
