@@ -19,29 +19,39 @@
 
 extern tree_t *treeHead;
 extern int *elemPerm, *nodePerm;
+extern int nbDCintf;
 
 // Read recursively each node of the D&C tree
 void recursive_reading (tree_t &tree, ifstream &treeFile)
 {
     bool isLeaf;
-    treeFile.read ((char*)&tree.firstElem, sizeof (int));
-    treeFile.read ((char*)&tree.lastElem,  sizeof (int));
-    treeFile.read ((char*)&tree.lastSep,   sizeof (int));
-    treeFile.read ((char*)&tree.firstNode, sizeof (int));
-    treeFile.read ((char*)&tree.lastNode,  sizeof (int));
-    treeFile.read ((char*)&tree.firstEdge, sizeof (int));
-    treeFile.read ((char*)&tree.lastEdge,  sizeof (int));
+    tree.nbOwnedNodes = -1;
+    tree.intfIndex    = nullptr;
+    tree.intfNodes    = nullptr;
+    tree.ownedNodes   = nullptr;
+    tree.left         = nullptr;
+    tree.right        = nullptr;
+    tree.sep          = nullptr;
+
+    treeFile.read ((char*)&tree.firstElem,    sizeof (int));
+    treeFile.read ((char*)&tree.lastElem,     sizeof (int));
+    treeFile.read ((char*)&tree.lastSep,      sizeof (int));
+    treeFile.read ((char*)&tree.firstNode,    sizeof (int));
+    treeFile.read ((char*)&tree.lastNode,     sizeof (int));
+    treeFile.read ((char*)&tree.firstEdge,    sizeof (int));
+    treeFile.read ((char*)&tree.lastEdge,     sizeof (int));
+    treeFile.read ((char*)&tree.nbIntfNodes,  sizeof (int));
+    if (tree.nbIntfNodes > 0) {
+        tree.intfIndex = new int [nbDCintf+1];
+        tree.intfNodes = new int [tree.nbIntfNodes];
+        treeFile.read ((char*)tree.intfIndex,   (nbDCintf + 1) * sizeof (int));
+        treeFile.read ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+    }
     #ifdef DC_VEC
         treeFile.read ((char*)&tree.vecOffset, sizeof (int));
     #endif
     treeFile.read ((char*)&tree.isSep, sizeof (bool));
     treeFile.read ((char*)&isLeaf, sizeof (bool));
-
-    tree.nbOwnedNodes = -1;
-    tree.ownedNodes   = nullptr;
-    tree.left         = nullptr;
-    tree.right        = nullptr;
-    tree.sep          = nullptr;
 
     if (isLeaf) {
         treeFile.read ((char*)&tree.nbOwnedNodes, sizeof (int));
@@ -81,6 +91,7 @@ void DC_read_tree (string &treePath, int nbElem, int nbNodes)
     }
 	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
 	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));
+	treeFile.read ((char*)&nbDCintf, sizeof (int));
 	recursive_reading (*treeHead, treeFile);
 	treeFile.close ();
 }
@@ -89,13 +100,18 @@ void DC_read_tree (string &treePath, int nbElem, int nbNodes)
 void recursive_storing (tree_t &tree, ofstream &treeFile)
 {
     bool isLeaf;
-    treeFile.write ((char*)&tree.firstElem, sizeof (int));
-    treeFile.write ((char*)&tree.lastElem,  sizeof (int));
-    treeFile.write ((char*)&tree.lastSep,   sizeof (int));
-    treeFile.write ((char*)&tree.firstNode, sizeof (int));
-    treeFile.write ((char*)&tree.lastNode,  sizeof (int));
-    treeFile.write ((char*)&tree.firstEdge, sizeof (int));
-    treeFile.write ((char*)&tree.lastEdge,  sizeof (int));
+    treeFile.write ((char*)&tree.firstElem,   sizeof (int));
+    treeFile.write ((char*)&tree.lastElem,    sizeof (int));
+    treeFile.write ((char*)&tree.lastSep,     sizeof (int));
+    treeFile.write ((char*)&tree.firstNode,   sizeof (int));
+    treeFile.write ((char*)&tree.lastNode,    sizeof (int));
+    treeFile.write ((char*)&tree.firstEdge,   sizeof (int));
+    treeFile.write ((char*)&tree.lastEdge,    sizeof (int));
+    treeFile.write ((char*)&tree.nbIntfNodes, sizeof (int));
+    if (tree.nbIntfNodes > 0) {
+        treeFile.write ((char*)tree.intfIndex,   (nbDCintf + 1) * sizeof (int));
+        treeFile.write ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+    }
     #ifdef DC_VEC
         treeFile.write ((char*)&tree.vecOffset, sizeof (int));
     #endif
@@ -103,7 +119,7 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
 
     if (tree.left == nullptr && tree.right == nullptr) {
         isLeaf = true;
-        treeFile.write ((char*)&isLeaf, sizeof (bool));
+        treeFile.write ((char*)&isLeaf,            sizeof (bool));
         treeFile.write ((char*)&tree.nbOwnedNodes, sizeof (int));
         if (tree.nbOwnedNodes > 0) {
             treeFile.write ((char*)tree.ownedNodes, tree.nbOwnedNodes * sizeof (int));
@@ -132,6 +148,7 @@ void DC_store_tree (string &treePath, int nbElem, int nbNodes)
     }
     treeFile.write ((char*)elemPerm, nbElem  * sizeof (int));
     treeFile.write ((char*)nodePerm, nbNodes * sizeof (int));
+    treeFile.write ((char*)&nbDCintf, sizeof (int));
     recursive_storing (*treeHead, treeFile);
     treeFile.close ();
 

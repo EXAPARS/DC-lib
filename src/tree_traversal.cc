@@ -24,9 +24,9 @@
 extern tree_t *treeHead;
 
 // Follow the D&C tree to execute the given function in parallel
-void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
-                     void (*userVecFct) (void *, DCargs_t *),
-                     void (*userCommFct) (void *),
+void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
+                     void (*userVecFct)  (void *, DCargs_t *),
+                     void (*userCommFct) (void *, DCcommArgs_t *),
                      void *userArgs, void *userCommArgs, tree_t &tree)
 {
     // If current node is a leaf, call the appropriate function
@@ -34,11 +34,11 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
 
         // Initialize the D&C arguments
         DCargs_t DCargs;
-        DCargs.firstNode    = tree.firstNode;
-        DCargs.lastNode     = tree.lastNode;
-        DCargs.firstEdge    = tree.firstEdge;
-        DCargs.lastEdge     = tree.lastEdge;
-        DCargs.isSep        = tree.isSep;
+        DCargs.firstNode = tree.firstNode;
+        DCargs.lastNode  = tree.lastNode;
+        DCargs.firstEdge = tree.firstEdge;
+        DCargs.lastEdge  = tree.lastEdge;
+        DCargs.isSep     = tree.isSep;
         #ifdef MULTITHREADED_COMM
             DCargs.nbOwnedNodes = tree.nbOwnedNodes;
             DCargs.ownedNodes   = tree.ownedNodes;
@@ -64,7 +64,10 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         // Call user communication function
         #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
-                userCommFct (userCommArgs);
+                DCcommArgs_t DCcommArgs;
+                DCcommArgs.intfIndex = tree.intfIndex;
+                DCcommArgs.intfNodes = tree.intfNodes;
+                userCommFct (userCommArgs, &DCcommArgs);
             }
         #endif
     }
@@ -98,16 +101,19 @@ void tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
         // Call user communication function
         #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
-                userCommFct (userCommArgs);
+                DCcommArgs_t DCcommArgs;
+                DCcommArgs.intfIndex = tree.intfIndex;
+                DCcommArgs.intfNodes = tree.intfNodes;
+                userCommFct (userCommArgs, &DCcommArgs);
             }
         #endif
     }
 }
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
-                        void (*userVecFct) (void *, DCargs_t *),
-                        void (*userCommFct) (void *),
+void DC_tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
+                        void (*userVecFct)  (void *, DCargs_t *),
+                        void (*userCommFct) (void *, DCcommArgs_t *),
                         void *userArgs, void *userCommArgs)
 {
     #ifdef OMP

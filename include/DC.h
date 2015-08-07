@@ -26,10 +26,10 @@
 // D&C tree structure
 typedef struct tree_s {
     int *intfIndex, *intfNodes, *ownedNodes;
-    int nbOwnedNodes;
     int firstElem, lastElem, lastSep,
         firstNode, lastNode,
-        firstEdge, lastEdge;
+        firstEdge, lastEdge,
+        nbIntfNodes, nbOwnedNodes;
     #ifdef DC_VEC
         int vecOffset;
     #endif
@@ -49,13 +49,10 @@ typedef struct DCargs_s {
         isSep;
 } DCargs_t;
 
-#ifdef MULTITHREADED_COMM
-    // D&C arguments structure for multithreaded comm
-    typedef struct DCcommArgs_s {
-        int *intfIndex, *intfNodes, *ownedNodes;
-        int nbOwnedNodes;
-    } DCcommArgs_t;
-#endif
+// D&C arguments structure for multithreaded comm
+typedef struct DCcommArgs_s {
+    int *intfIndex, *intfNodes;
+} DCcommArgs_t;
 
 typedef struct {
     int *index, *value;
@@ -104,11 +101,10 @@ double DC_get_time ();
 uint64_t DC_get_cycles ();
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void DC_tree_traversal (void (*userSeqFct) (void *, DCargs_t *),
-                        void (*userVecFct) (void *, DCargs_t *),
-                        void (*userCommFct) (void *),
+void DC_tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
+                        void (*userVecFct)  (void *, DCargs_t *),
+                        void (*userCommFct) (void *, DCcommArgs_t *),
                         void *userArgs, void *userCommArgs);
-
 
 // Create element to element array from element to node and node to element
 // Two elements are neighbors if they share a node

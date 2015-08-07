@@ -30,9 +30,9 @@ double dc_get_time_ ()
 }
 
 // Wrapper used to get the root of the D&C tree before calling the real tree traversal
-void dc_tree_traversal_ (void (*userSeqFct) (void *, DCargs_t *),
-                         void (*userVecFct) (void *, DCargs_t *),
-                         void (*userCommFct) (void *),
+void dc_tree_traversal_ (void (*userSeqFct)  (void *, DCargs_t *),
+                         void (*userVecFct)  (void *, DCargs_t *),
+                         void (*userCommFct) (void *, DCcommArgs_t *),
                          void *userArgs, void *userCommArgs)
 {
     DC_tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs, userCommArgs);

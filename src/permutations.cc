@@ -49,9 +49,9 @@ void DC_permute_double_2d_array (double *tab, int nbItem, int dimItem)
 // Permute "tab" 2D array of int using "perm"
 void DC_permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem, int offset)
 {
-	char *checkPerm = new char [nbItem] ();
-	int  *tmpSrc    = new int  [dimItem];
-	int  *tmpDest   = new int  [dimItem];
+    char *checkPerm = new char [nbItem] ();
+    int  *tmpSrc    = new int  [dimItem];
+    int  *tmpDest   = new int  [dimItem];
 
     // If no permutation is given, default behavior is to use D&C elemPerm
     if (perm == nullptr) perm = elemPerm;

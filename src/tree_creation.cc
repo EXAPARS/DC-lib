@@ -30,7 +30,7 @@
 // to the library to another
 tree_t *treeHead = nullptr;
 int *elemPerm = nullptr, *nodePerm = nullptr;
-int commLevel;
+int nbDCintf = 0, commLevel = 0;
 
 #ifdef TREE_CREATION
 
@@ -81,6 +81,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                 }
             }
         }
+        tree.nbIntfNodes = nbIntfNodes;
 
         // If there are owned nodes on the interface
         if (nbIntfNodes > 0) {
@@ -136,6 +137,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                 }
             }
         }
+        tree.nbIntfNodes = nbIntfNodes;
 
         // If there are owned nodes on the interface
         if (nbIntfNodes > 0) {
@@ -296,6 +298,7 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
     tree_finalize (*treeHead, nodeToNodeRow, elemToNode, intfIndex, intfNodes, dimElem,
                    nbBlocks, nbIntf, 0, 0);
 
+    nbDCintf = nbIntf;
     #ifdef MULTITHREADED_COMM
         delete[] nodeOwner;
     #endif
@@ -305,19 +308,18 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
                    int firstNode, int lastNode, bool isSep, bool isLeaf)
 {
-    #ifdef MULTITHREADED_COMM
-        tree.intfIndex    = nullptr;
-        tree.intfNodes    = nullptr;
-        tree.ownedNodes   = nullptr;
-        tree.nbOwnedNodes = -1;
-    #endif
-    tree.firstElem = firstElem;
-    tree.lastElem  = lastElem - nbSepElem;
-    tree.lastSep   = lastElem;
-    tree.firstNode = firstNode;
-    tree.lastNode  = lastNode;
-    tree.firstEdge = -1;
-    tree.lastEdge  = -1;
+    tree.intfIndex    = nullptr;
+    tree.intfNodes    = nullptr;
+    tree.ownedNodes   = nullptr;
+    tree.firstElem    = firstElem;
+    tree.lastElem     = lastElem - nbSepElem;
+    tree.lastSep      = lastElem;
+    tree.firstNode    = firstNode;
+    tree.lastNode     = lastNode;
+    tree.firstEdge    = -1;
+    tree.lastEdge     = -1;
+    tree.nbIntfNodes  = -1;
+    tree.nbOwnedNodes = -1;
     #ifdef DC_VEC
         tree.vecOffset = 0;
     #endif
