@@ -83,7 +83,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
         }
 
         // If there are owned nodes on the interface
-        if (nbIntfNodes > 0) {
+        if (nbIntfNodes > 0) {
 
             // Allocate the interface index
             tree.intfIndex = new int [nbIntf+1];
@@ -138,7 +138,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
         }
 
         // If there are owned nodes on the interface
-        if (nbIntfNodes > 0) {
+        if (nbIntfNodes > 0) {
 
             // Allocate the interface index
             tree.intfIndex = new int [nbIntf+1];
