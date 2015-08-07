@@ -82,33 +82,41 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
             }
         }
 
-        // Allocate the interface index
-        tree.intfIndex = new int [nbIntf+1];
-        tree.intfNodes = new int [nbIntfNodes];
+        // If there are owned nodes on the interface
+        if (nbIntfNodes > 0) {
 
-        // Initialize the interface index
-        for (int i = 0; i < nbIntf; i++) {
-            tree.intfIndex[i] = ctr;
+            // Allocate the interface index
+            tree.intfIndex = new int [nbIntf+1];
+            tree.intfNodes = new int [nbIntfNodes];
 
-            // Run through all nodes accessed by current D&C node
-            for (int j = tree.firstElem*dimElem; j < (tree.lastElem+1)*dimElem; j++) {
-                int node = elemToNode[j] - 1;
+            // Initialize the interface index
+            for (int i = 0; i < nbIntf; i++) {
+                tree.intfIndex[i] = ctr;
 
-                // Check if nodes are owned a descendant of current D&C node
-                if (isDescendant (curNode, nodeOwner[node])) {
+                // Run through all nodes accessed by current D&C node
+                for (int j = tree.firstElem * dimElem; j < (tree.lastElem+1) * dimElem;
+                     j++) {
+                    int node = elemToNode[j] - 1;
 
-                    // Check if nodes are on the interface
-                    for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                        int intfNode = intfNodes[k];
-                        if ((node + 1) == intfNode) {
-                            tree.intfNodes[ctr] = intfNode;
-                            ctr++;
+                    // Check if nodes are owned a descendant of current D&C node
+                    if (isDescendant (curNode, nodeOwner[node])) {
+
+                        // Check if nodes are on the interface
+                        for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
+                            int intfNode = intfNodes[k];
+                            if ((node + 1) == intfNode) {
+                                tree.intfNodes[ctr] = intfNode;
+                                ctr++;
+                                if (ctr == nbIntfNodes) break;
+                            }
                         }
                     }
+                    if (ctr == nbIntfNodes) break;
                 }
+                if (ctr == nbIntfNodes) break;
             }
+            tree.intfIndex[nbIntf] = ctr;
         }
-        tree.intfIndex[nbIntf] = ctr;
     }
 
     // If current node is a leaf at/upper communication level
@@ -129,29 +137,36 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
             }
         }
 
-        // Allocate the interface index
-        tree.intfIndex = new int [nbIntf+1];
-        tree.intfNodes = new int [nbIntfNodes];
+        // If there are owned nodes on the interface
+        if (nbIntfNodes > 0) {
 
-        // Initialize the interface index
-        for (int i = 0; i < nbIntf; i++) {
-            tree.intfIndex[i] = ctr;
+            // Allocate the interface index
+            tree.intfIndex = new int [nbIntf+1];
+            tree.intfNodes = new int [nbIntfNodes];
 
-            // Run through all nodes owned by current D&C node
-            for (int j = 0; j < tree.nbOwnedNodes; j++) {
-                int node = tree.ownedNodes[j];
+            // Initialize the interface index
+            for (int i = 0; i < nbIntf; i++) {
+                tree.intfIndex[i] = ctr;
 
-                // Check if nodes are on the interface
-                for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                    int intfNode = intfNodes[k];
-                    if ((node + 1) == intfNode) {
-                        tree.intfNodes[ctr] = intfNode;
-                        ctr++;
+                // Run through all nodes owned by current D&C node
+                for (int j = 0; j < tree.nbOwnedNodes; j++) {
+                    int node = tree.ownedNodes[j];
+
+                    // Check if nodes are on the interface
+                    for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
+                        int intfNode = intfNodes[k];
+                        if ((node + 1) == intfNode) {
+                            tree.intfNodes[ctr] = intfNode;
+                            ctr++;
+                            if (ctr == nbIntfNodes) break;
+                        }
                     }
+                    if (ctr == nbIntfNodes) break;
                 }
+                if (ctr == nbIntfNodes) break;
             }
+            tree.intfIndex[nbIntf] = ctr;
         }
-        tree.intfIndex[nbIntf] = ctr;
     }
 }
 
@@ -159,7 +174,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
 void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int curNode)
 {
     // Count the number of owned nodes
-    int nbOwnedNodes = 0, ctr = 0;
+    int nbOwnedNodes = 0;
     if (tree.isSep) {
         for (int i = tree.firstElem * dimElem; i < (tree.lastElem+1) * dimElem; i++) {
             int node = elemToNode[i] - 1;
@@ -174,24 +189,27 @@ void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int cu
     tree.nbOwnedNodes = nbOwnedNodes;
 
     // Allocate and initialize the list of owned nodes
-    if (nbOwnedNodes > 0) tree.ownedNodes = new int [nbOwnedNodes];
-    if (tree.isSep) {
-        for (int i = tree.firstElem * dimElem; i < (tree.lastElem+1) * dimElem; i++) {
-            int node = elemToNode[i] - 1;
-            if (nodeOwner[node] == curNode) {
-                tree.ownedNodes[ctr] = node;
-                ctr++;
+    if (nbOwnedNodes > 0) {
+        int ctr = 0;
+        tree.ownedNodes = new int [nbOwnedNodes];
+        if (tree.isSep) {
+            for (int i = tree.firstElem*dimElem; i < (tree.lastElem+1)*dimElem; i++) {
+                int node = elemToNode[i] - 1;
+                if (nodeOwner[node] == curNode) {
+                    tree.ownedNodes[ctr] = node;
+                    ctr++;
+                }
+                if (ctr == nbOwnedNodes) break;
             }
-            if (ctr == nbOwnedNodes) break;
         }
-    }
-    else {
-        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
-            if (nodeOwner[i] == curNode) {
-                tree.ownedNodes[ctr] = i;
-                ctr++;
+        else {
+            for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+                if (nodeOwner[i] == curNode) {
+                    tree.ownedNodes[ctr] = i;
+                    ctr++;
+                }
+                if (ctr == nbOwnedNodes) break;
             }
-            if (ctr == nbOwnedNodes) break;
         }
     }
 }
