@@ -17,8 +17,10 @@
 #  the DC-lib. If not, see <http://www.gnu.org/licenses/>.
 
 # Libraries path
-METIS_PATH=$HOME/Programs/METIS
-METIS_INCLUDE=$METIS_PATH/include
+GASPI_PATH="$HOME/Programs/GPI-2"
+GASPI_INCLUDE="$GASPI_PATH/include"
+METIS_PATH="$HOME/Programs/METIS"
+METIS_INCLUDE="$METIS_PATH/include"
 
 # Case insensitive comparisons
 shopt -s nocasematch
@@ -116,27 +118,29 @@ if [[ $ARCHI == "mic" ]]; then
 
     if [[ $TREE == 1 ]]; then
         cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              . -G "Unix Makefiles"
-    else
-        cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+              -DGASPI_INCLUDE=$GASPI_INCLUDE -DMETIS_INCLUDE=$METIS_INCLUDE \
               -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
               -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG \
               -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
-    fi
-else
-    if [[ $TREE == 1 ]]; then
-        cmake -DMETIS_INCLUDE=$METIS_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
+    else
+        cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+              -DGASPI_INCLUDE=$GASPI_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
               -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
               -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
-    else
-        cmake -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
-              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG \
+    fi
+else
+    if [[ $TREE == 1 ]]; then
+        cmake -DGASPI_INCLUDE=$GASPI_INCLUDE -DMETIS_INCLUDE=$METIS_INCLUDE \
+              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVECTO=$VECTO -DARCHI=$ARCHI \
+              -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS -DDEBUG=$DEBUG \
               -DVERBOSE=$VERBOSE \
+              . -G "Unix Makefiles"
+    else
+        cmake -DGASPI_INCLUDE=$GASPI_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
+              -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 fi
