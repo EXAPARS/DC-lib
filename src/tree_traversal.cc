@@ -62,14 +62,14 @@ void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
         #endif
 
         // Call user communication function
-        #ifdef MULTITHREADED_COMM
+/*        #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
                 DCcommArgs_t DCcommArgs;
                 DCcommArgs.intfIndex = tree.intfIndex;
                 DCcommArgs.intfNodes = tree.intfNodes;
                 userCommFct (userCommArgs, &DCcommArgs);
             }
-        #endif
+        #endif */
     }
     else {
         #ifdef OMP
@@ -99,14 +99,14 @@ void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
         }
 
         // Call user communication function
-        #ifdef MULTITHREADED_COMM
+/*        #ifdef MULTITHREADED_COMM
             if (tree.intfIndex != nullptr) {
                 DCcommArgs_t DCcommArgs;
                 DCcommArgs.intfIndex = tree.intfIndex;
                 DCcommArgs.intfNodes = tree.intfNodes;
                 userCommFct (userCommArgs, &DCcommArgs);
             }
-        #endif
+        #endif */
     }
 }
 
