@@ -31,6 +31,7 @@
 
 extern tree_t *treeHead;
 extern int *elemPerm, *nodePerm, *nodeOwner;
+extern int commLevel;
 
 pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -191,11 +192,11 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int ra
 
     // Configure METIS & compute the node partitioning of the mesh
     int nbPart = ceil (nbElem / (double)MAX_ELEM_PER_PART);
-    int commLevel = ceil ((double)log2 (nbPart) / 2.);
     int constraint = 1, objVal;
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
     int *nodePart   = new int [nbNodes];
+    commLevel = ceil ((double)log2 (nbPart) / 2.);
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue,
                               nullptr, nullptr, nullptr, &nbPart, nullptr, nullptr,

@@ -26,10 +26,10 @@
 // D&C tree structure
 typedef struct tree_s {
     int *intfIndex, *intfNodes, *ownedNodes;
-    int firstElem, lastElem, lastSep,
+    int nbIntfNodes, nbOwnedNodes,
+        firstElem, lastElem, lastSep,
         firstNode, lastNode,
-        firstEdge, lastEdge,
-        nbIntfNodes, nbOwnedNodes;
+        firstEdge, lastEdge;
     #ifdef DC_VEC
         int vecOffset;
     #endif
