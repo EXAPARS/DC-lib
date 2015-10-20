@@ -25,14 +25,13 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    int *intfIndex, *intfNodes, *ownedNodes;
-    int nbIntfNodes, nbOwnedNodes,
+    int *intfIndex, *intfNodes, *intfDest, *ownedNodes;
+    int intfOffset, nbIntfNodes, nbLeftIntfNodes, nbRightIntfNodes, nbSepIntfNodes,
+        nbOwnedNodes,
         firstElem, lastElem, lastSep,
         firstNode, lastNode,
-        firstEdge, lastEdge;
-    #ifdef DC_VEC
-        int vecOffset;
-    #endif
+        firstEdge, lastEdge,
+        vecOffset;
     bool isSep;
     struct tree_s *left, *right, *sep;
 } tree_t;
@@ -51,7 +50,7 @@ typedef struct DCargs_s {
 
 // D&C arguments structure for multithreaded comm
 typedef struct DCcommArgs_s {
-    int *intfIndex, *intfNodes;
+    int *intfIndex, *intfNodes, *intfDest;
 } DCcommArgs_t;
 
 typedef struct {
@@ -132,14 +131,15 @@ void DC_renumber_int_array (int *tab, int size, bool isFortran);
 void DC_create_permutation (int *perm, int *part, int size, int nbPart);
 
 // Read the D&C tree and the permutation functions
-void DC_read_tree (std::string &treePath, int nbElem, int nbNodes);
+void DC_read_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf);
 
 // Store the D&C tree and the permutation functions to a binary file
-void DC_store_tree (std::string &treePath, int nbElem, int nbNodes);
+void DC_store_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf);
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                       int *intfNodes, int dimElem, int nbBlocks, int nbIntf);
+                       int *intfNodes, int *intfShifts, int dimElem, int nbBlocks,
+                       int nbIntf, int nbIntfNodes, int rank);
 
 // Create the D&C tree and the permutations
 void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank);

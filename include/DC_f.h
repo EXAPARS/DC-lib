@@ -49,15 +49,16 @@ extern "C" {
     void dc_create_permutation_ (int *perm, int *part, int *size, int *nbPart);
 
     // Read the D&C tree and the permutation functions
-    void dc_read_tree_ (char *treePath, int *nbElem, int *nbNodes);
+    void dc_read_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf);
 
     // Store the D&C tree and the permutation functions to a binary file
-    void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes);
+    void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf);
 
     // Wrapper used to get the root of the D&C tree before calling the real tree
     // finalize
     void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                            int *intfNodes, int *dimElem, int *nbBlocks, int *nbIntf);
+                            int *intfNodes, int *intfShifts, int *dimElem,
+                            int *nbBlocks, int *nbIntf, int *nbIntfNodes, int *rank);
 
     // Create the D&C tree and the permutations
     void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,

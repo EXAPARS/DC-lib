@@ -198,9 +198,9 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int ra
     int *nodePart   = new int [nbNodes];
     commLevel = ceil ((double)log2 (nbPart) / 2.);
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
-    METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue,
-                              nullptr, nullptr, nullptr, &nbPart, nullptr, nullptr,
-                              nullptr, &objVal, nodePart);
+    METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue, nullptr,
+                              nullptr, nullptr, &nbPart, nullptr, nullptr, nullptr,
+                              &objVal, nodePart);
     delete[] graphValue, delete[] graphIndex;
 
     // Create node permutation from node partition

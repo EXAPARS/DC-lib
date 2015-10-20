@@ -24,13 +24,17 @@
 
 #ifdef MULTITHREADED_COMM
 
+// Compute the offset of the interface in the GASPI segment for each D&C node
+void intf_offset_propagation (tree_t &tree, int curOffset, int curLevel, int curNode, int rank);
+
 // Determine if nodeID is a descendant of current node
 bool isDescendant (int curNode, int nodeID);
 
 // Initialize D&C tree interface for multithreaded communication
-void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
-                                int *intfNodes, int dimElem, int nbIntf, int nbBlocks,
-                                int curNode, int curLevel, bool isLeaf);
+int create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
+                               int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
+                               int dimElem, int nbIntf, int nbBlocks, int curNode,
+                               int curLevel, bool isLeaf);
 
 // Compute the number of nodes owned by current leaf and fill the list
 void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int curNode);
@@ -38,14 +42,15 @@ void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int cu
 #endif
 
 // Compute the edge interval, the list of nodes owned by each leaf of the D&C tree,
-// and the interface for multithreaded communication
-void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                    int *intfNodes, int dimElem, int nbBlocks, int nbIntf, int curNode,
-                    int curLevel);
+// and the interface index for multithreaded communication
+int tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
+                   int *intfNodes, int *intfDestOffsets, int *nbDCcomm, int dimElem,
+                   int nbBlocks, int nbIntf, int curNode, int curLevel);
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                       int *intfNodes, int dimElem, int nbBlocks, int nbIntf);
+                       int *intfNodes, int *intfDestOffsets, int dimElem, int nbBlocks,
+                       int nbIntf, int nbIntfNodes, int rank);
 
 // Initialize the content of D&C tree nodes
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,

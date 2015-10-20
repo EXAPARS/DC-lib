@@ -19,10 +19,9 @@
 
 extern tree_t *treeHead;
 extern int *elemPerm, *nodePerm;
-extern int nbDCintf;
 
 // Read recursively each node of the D&C tree
-void recursive_reading (tree_t &tree, ifstream &treeFile)
+void recursive_reading (tree_t &tree, ifstream &treeFile, int nbIntf)
 {
     bool isLeaf;
     tree.nbOwnedNodes = -1;
@@ -42,16 +41,15 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
     treeFile.read ((char*)&tree.lastEdge,     sizeof (int));
     treeFile.read ((char*)&tree.nbIntfNodes,  sizeof (int));
     if (tree.nbIntfNodes > 0) {
-        tree.intfIndex = new int [nbDCintf+1];
+        tree.intfIndex = new int [nbIntf+1];
         tree.intfNodes = new int [tree.nbIntfNodes];
-        treeFile.read ((char*)tree.intfIndex,   (nbDCintf + 1) * sizeof (int));
+        treeFile.read ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
         treeFile.read ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+        treeFile.read ((char*)tree.intfDest,  tree.nbIntfNodes * sizeof (int));
     }
-    #ifdef DC_VEC
-        treeFile.read ((char*)&tree.vecOffset, sizeof (int));
-    #endif
-    treeFile.read ((char*)&tree.isSep, sizeof (bool));
-    treeFile.read ((char*)&isLeaf, sizeof (bool));
+    treeFile.read ((char*)&tree.vecOffset, sizeof (int));
+    treeFile.read ((char*)&tree.isSep,     sizeof (bool));
+    treeFile.read ((char*)&isLeaf,         sizeof (bool));
 
     if (isLeaf) {
         treeFile.read ((char*)&tree.nbOwnedNodes, sizeof (int));
@@ -68,16 +66,16 @@ void recursive_reading (tree_t &tree, ifstream &treeFile)
         }
 
         // Left, right & separator recursion
-        recursive_reading (*tree.left,  treeFile);
-        recursive_reading (*tree.right, treeFile);
+        recursive_reading (*tree.left,  treeFile, nbIntf);
+        recursive_reading (*tree.right, treeFile, nbIntf);
         if (tree.sep != nullptr) {
-            recursive_reading (*tree.sep, treeFile);
+            recursive_reading (*tree.sep, treeFile, nbIntf);
         }
     }
 }
 
 // Read the D&C tree and the permutation functions
-void DC_read_tree (string &treePath, int nbElem, int nbNodes)
+void DC_read_tree (string &treePath, int nbElem, int nbNodes, int nbIntf)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -91,13 +89,12 @@ void DC_read_tree (string &treePath, int nbElem, int nbNodes)
     }
 	treeFile.read ((char*)elemPerm, nbElem  * sizeof (int));
 	treeFile.read ((char*)nodePerm, nbNodes * sizeof (int));
-	treeFile.read ((char*)&nbDCintf, sizeof (int));
-	recursive_reading (*treeHead, treeFile);
+	recursive_reading (*treeHead, treeFile, nbIntf);
 	treeFile.close ();
 }
 
 // Store recursively each node of the D&C tree
-void recursive_storing (tree_t &tree, ofstream &treeFile)
+void recursive_storing (tree_t &tree, ofstream &treeFile, int nbIntf)
 {
     bool isLeaf;
     treeFile.write ((char*)&tree.firstElem,   sizeof (int));
@@ -109,13 +106,12 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
     treeFile.write ((char*)&tree.lastEdge,    sizeof (int));
     treeFile.write ((char*)&tree.nbIntfNodes, sizeof (int));
     if (tree.nbIntfNodes > 0) {
-        treeFile.write ((char*)tree.intfIndex,   (nbDCintf + 1) * sizeof (int));
+        treeFile.write ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
         treeFile.write ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+        treeFile.write ((char*)tree.intfDest,  tree.nbIntfNodes * sizeof (int));
     }
-    #ifdef DC_VEC
-        treeFile.write ((char*)&tree.vecOffset, sizeof (int));
-    #endif
-    treeFile.write ((char*)&tree.isSep, sizeof (bool));
+    treeFile.write ((char*)&tree.vecOffset, sizeof (int));
+    treeFile.write ((char*)&tree.isSep,     sizeof (bool));
 
     if (tree.left == nullptr && tree.right == nullptr) {
         isLeaf = true;
@@ -130,16 +126,16 @@ void recursive_storing (tree_t &tree, ofstream &treeFile)
         treeFile.write ((char*)&isLeaf, sizeof (bool));
 
         // Left, right & separator recursion
-        recursive_storing (*tree.left,  treeFile);
-        recursive_storing (*tree.right, treeFile);
+        recursive_storing (*tree.left,  treeFile, nbIntf);
+        recursive_storing (*tree.right, treeFile, nbIntf);
         if (tree.sep != nullptr) {
-            recursive_storing (*tree.sep, treeFile);
+            recursive_storing (*tree.sep, treeFile, nbIntf);
         }
     }
 }
 
 // Store the D&C tree and the permutation functions to a binary file
-void DC_store_tree (string &treePath, int nbElem, int nbNodes)
+void DC_store_tree (string &treePath, int nbElem, int nbNodes, int nbIntf)
 {
     ofstream treeFile (treePath, ios::out | ios::trunc | ios::binary);
     if (!treeFile.is_open ()) {
@@ -148,8 +144,7 @@ void DC_store_tree (string &treePath, int nbElem, int nbNodes)
     }
     treeFile.write ((char*)elemPerm, nbElem  * sizeof (int));
     treeFile.write ((char*)nodePerm, nbNodes * sizeof (int));
-    treeFile.write ((char*)&nbDCintf, sizeof (int));
-    recursive_storing (*treeHead, treeFile);
+    recursive_storing (*treeHead, treeFile, nbIntf);
     treeFile.close ();
 
     delete[] nodePerm, delete[] elemPerm; 
