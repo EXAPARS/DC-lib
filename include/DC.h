@@ -51,6 +51,7 @@ typedef struct DCargs_s {
 // D&C arguments structure for multithreaded comm
 typedef struct DCcommArgs_s {
     int *intfIndex, *intfNodes, *intfDest;
+    int intfOffset;
 } DCcommArgs_t;
 
 typedef struct {

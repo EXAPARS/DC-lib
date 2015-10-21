@@ -208,8 +208,8 @@ int create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                                 // interface
                                 if ((node + 1) == intfNode) {
                                     tree.intfNodes[ctr] = intfNode;
-                                    tree.intfDest [ctr] = k - intfIndex[i] +
-                                                          intfDestOffsets[i];
+                                    tree.intfDest [ctr] = intfDestOffsets[i] -
+                                                          intfIndex[i] + k;
                                     ctr++;
                                 }
                                 if (ctr == nbIntfNodes) break;
@@ -237,8 +237,8 @@ int create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                                 // interface
                                 if ((j + 1) == intfNode) {
                                     tree.intfNodes[ctr] = intfNode;
-                                    tree.intfDest [ctr] = k - intfIndex[i] +
-                                                          intfDestOffsets[i];
+                                    tree.intfDest [ctr] = intfDestOffsets[i] -
+                                                          intfIndex[i] + k;
                                     ctr++;
                                 }
                                 if (ctr == nbIntfNodes) break;
@@ -313,8 +313,7 @@ int create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                         // If D&C node is on the interface, add it to the D&C interface
                         if ((node + 1) == intfNode) {
                             tree.intfNodes[ctr] = intfNode;
-                            tree.intfDest [ctr] = k - intfIndex[i] +
-                                                  intfDestOffsets[i];
+                            tree.intfDest [ctr] = intfDestOffsets[i] - intfIndex[i]+k;
                             ctr++;
                         }
                         if (ctr == nbIntfNodes) break;
