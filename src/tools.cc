@@ -1,4 +1,4 @@
-/*  Copyright 2014 - UVSQ
+/*  Copyright 2013 - UVSQ
     Authors list: Loïc Thébault, Eric Petit
 
     This file is part of the DC-lib.
@@ -257,11 +257,12 @@ void store_intf_stats (int nbElem, int rank)
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
-void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                          int LRS, bool hasIntfNode)
+void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int LRS,
+                          bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " [label=\"" << curNode << "\\n["
-		   << firstElem << "," << lastElem << "]\"";
+		   << tree.firstElem << "," << tree.lastElem << "]\\n["
+		   << tree.firstNode << "," << tree.lastNode << "]\"";
 
     if (hasIntfNode)   dcFile << ", color=red];\n";
 	else if (LRS == 1) dcFile << ", color=turquoise4];\n";
@@ -271,16 +272,32 @@ void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int last
 }
 
 // Fill the nodes of the D&C tree dot file
-void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                         int nbSepElem, bool hasIntfNode)
+void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " -> {" << 3*curNode+1 << "; " << 3*curNode+2;
-	if (nbSepElem > 0) dcFile << "; " << 3*curNode+3 << ";}\n\t";
-	else			   dcFile << ";}\n\t";
-	dcFile << curNode << " [label=\"" << curNode << "\\n[" << firstElem
-		   << "," << lastElem-nbSepElem << "," << lastElem << "]\", style=rounded";
+	if (tree.sep != nullptr) dcFile << "; " << 3*curNode+3 << ";}\n\t";
+	else			         dcFile << ";}\n\t";
+	dcFile << curNode << " [label=\"" << curNode << "\\n[" << tree.firstElem
+		   << "," << tree.lastElem << "," << tree.lastSep << "]\\n["
+           << tree.firstNode << "," << tree.lastNode << "]\", style=rounded";
     if (hasIntfNode) dcFile << ", color=red];\n";
     else             dcFile << "];\n";
+}
+
+// Detect if given D&C node has nodes on the interface
+bool has_intf_node (tree_t &tree, int *intfIndex, int *intfNodes, int nbIntf)
+{
+    for (int i = 0; i < nbIntf; i++) {
+        for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+            int intfNode = intfNodes[j] - 1;
+            for (int k = tree.firstNode; k <= tree.lastNode; k++) {
+                if (intfNode == k) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 // Close the D&C tree dot file
@@ -291,13 +308,12 @@ void close_dc_file (ofstream &dcFile)
 }
 
 // Initialize the D&C tree dot file with default layout
-void init_dc_file (ofstream &dcFile, int nbPart)
+void init_dc_file (ofstream &dcFile)
 {
 	if (!dcFile) cerr << "Error opening dcFile!\n";
 
-	dcFile << "digraph RecursiveTree {\n\t-1 [label=\"Partitions : " << nbPart
-		   << "\\nMax elements per partition : " << MAX_ELEM_PER_PART
-		   << "\", shape=plaintext];\n"
+	dcFile << "digraph RecursiveTree {\n\t-1 [label=\"Max elements per partition : "
+           << MAX_ELEM_PER_PART << "\", shape=plaintext];\n"
 		   << "\tnode [shape=box, style=\"rounded,filled\"];\n";
 }
 

@@ -57,8 +57,9 @@ extern "C" {
     // Wrapper used to get the root of the D&C tree before calling the real tree
     // finalize
     void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                            int *intfNodes, int *intfShifts, int *dimElem,
-                            int *nbBlocks, int *nbIntf, int *nbIntfNodes, int *rank);
+                            int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
+                            int *nbElem, int *dimElem, int *nbBlocks, int *nbIntf,
+                            int *rank, int *nbIntfNodes);
 
     // Create the D&C tree and the permutations
     void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,

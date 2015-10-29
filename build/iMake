@@ -45,16 +45,16 @@ DEBUG=0
 VERBOSE=0
 
 for i in $@; do
-	if [[ $i == "clean" ]]; then
-	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
+    if [[ $i == "clean" ]]; then
+        rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
               external_files.mod mod_qvddump.mod 2> /dev/null
-	    echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
-	    exit
-	elif [[ $i == "mrproper" ]]; then
-	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../lib/* \
+        echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
+        exit
+    elif [[ $i == "mrproper" ]]; then
+        rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../lib/* \
               external_files.mod mod_qvddump.mod 2> /dev/null
-	    echo -e "\\033[1;32mBuild & lib directories have been cleaned up\\033[0;39m"
-	    exit
+        echo -e "\\033[1;32mBuild & lib directories have been cleaned up\\033[0;39m"
+        exit
     elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
         DISTRI="XMPI"
         BULK=1

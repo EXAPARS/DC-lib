@@ -71,18 +71,20 @@ void store_intf_stats (int nbElem, int rank);
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
-void fill_dc_file_leaves (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                          int LRS, bool hasIntfNode);
+void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int LRS,
+                          bool hasIntfNode);
 
 // Fill the nodes of the D&C tree dot file
-void fill_dc_file_nodes (ofstream &dcFile, int curNode, int firstElem, int lastElem,
-                         int nbSepElem, bool hasIntfNode);
+void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode,bool hasIntfNode);
+
+// Detect if given D&C node has nodes on the interface
+bool has_intf_node (tree_t &tree, int *intfIndex, int *intfNodes, int nbIntf);
 
 // Close the D&C tree dot file
 void close_dc_file (ofstream &dcFile);
 
 // Initialize the D&C tree dot file with default layout
-void init_dc_file (ofstream &dcFile, int nbPart);
+void init_dc_file (ofstream &dcFile);
 
 /*****************************************************************************/
 /***********                       2D matrix                       ***********/

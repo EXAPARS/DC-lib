@@ -31,7 +31,9 @@
 
 extern tree_t *treeHead;
 extern int *elemPerm, *nodePerm, *nodeOwner;
-extern int commLevel;
+#ifdef MULTITHREADED_COMM
+    extern int commLevel;
+#endif
 
 pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -115,11 +117,7 @@ int create_sepToNode (int *sepToNode, int *elemToNode, int firstSepElem,
 // D&C partitioning of separators with more than MAX_ELEM_PER_PART elements
 void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimElem,
                        int firstSepElem, int lastSepElem, int firstNode, int lastNode,
-#ifdef STATS
-                       int curNode, ofstream &dcFile)
-#else
                        int curNode)
-#endif
 {
     // If there is not enough element in the separator
     int nbSepElem = lastSepElem - firstSepElem + 1;
@@ -135,11 +133,6 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
         // Initialize the leaf
         init_dc_tree (tree, firstSepElem, lastSepElem, 0, firstNode, lastNode, true,
                       true);
-        #ifdef STATS
-            fill_dc_file_leaves (dcFile, curNode, firstSepElem, lastSepElem, 3,
-                                 hasIntfNode);
-            count_intf_stats (hasIntfNode);
-        #endif
 
         // End of recursion
         return;
@@ -169,11 +162,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
     // Create the separator D&C tree
     tree_creation (tree, elemToNode, sepToNode, nodePart, nullptr, globalNbElem,
                    dimElem, 0, nbSepPart-1, firstSepElem, lastSepElem, firstNode,
-    #ifdef STATS
-                   lastNode, 0, curNode, true, dcFile, -1);
-    #else
                    lastNode, 0, curNode, true);
-    #endif
     delete[] nodePart, delete[] sepToNode;
 }
 
@@ -196,7 +185,9 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int ra
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
     int *nodePart   = new int [nbNodes];
-    commLevel = ceil ((double)log2 (nbPart) / 2.);
+    #ifdef MULTITHREADED_COMM
+        commLevel = ceil ((double)log2 (nbPart) / 2.);
+    #endif
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue, nullptr,
                               nullptr, nullptr, &nbPart, nullptr, nullptr, nullptr,
@@ -212,33 +203,14 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int ra
         nodePartSize[nodePart[i]]++;
     }
 
-    // Create D&C tree dot file
-    #ifdef STATS
-        string fileName = "dcTree_" + to_string ((long long)rank) + "_" +
-                           to_string ((long long)MAX_ELEM_PER_PART) + ".dot";
-        ofstream dcFile (fileName, ios::out | ios::trunc);
-        init_dc_file (dcFile, nbPart);
-    #endif
-
 	// Create D&C tree
 	#ifdef OMP
 		#pragma omp parallel
 		#pragma omp single nowait
     #endif
     tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
-                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false
-    #ifdef STATS
-                   , dcFile, -1);
-    #else
-                   );
-    #endif
+                   dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false);
     delete[] nodePartSize, delete[] nodePart;
-
-    #ifdef STATS
-    	close_dc_file (dcFile);
-        store_intf_stats (nbElem, rank);
-    	dc_stat ();
-    #endif
 
 	// C to Fortran elemToNode conversion
     #ifdef OMP

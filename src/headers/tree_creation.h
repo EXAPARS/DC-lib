@@ -25,7 +25,7 @@
 #ifdef MULTITHREADED_COMM
 
 // Compute the offset of the interface in the GASPI segment for each D&C node
-void intf_offset_propagation (tree_t &tree, int curOffset, int curLevel, int curNode, int rank);
+void intf_offset_propagation (tree_t &tree, int curOffset, int curLevel);
 
 // Determine if nodeID is a descendant of current node
 bool isDescendant (int curNode, int nodeID);
@@ -42,15 +42,17 @@ void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int cu
 #endif
 
 // Compute the edge interval, the list of nodes owned by each leaf of the D&C tree,
-// and the interface index for multithreaded communication
+// the interface index for multithreaded communication, and the number of
+// communication per interface
 int tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
                    int *intfNodes, int *intfDestOffsets, int *nbDCcomm, int dimElem,
-                   int nbBlocks, int nbIntf, int curNode, int curLevel);
+                   int nbBlocks, int nbIntf, int curNode, int curLevel, int LRS,
+                   ofstream &dcFile);
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                       int *intfNodes, int *intfDestOffsets, int dimElem, int nbBlocks,
-                       int nbIntf, int nbIntfNodes, int rank);
+                       int *intfNodes, int *intfDestOffsets, int *nbDCcomm, int nbElem,
+                       int dimElem, int nbBlocks, int nbIntf, int rank, int nbIntfNodes);
 
 // Initialize the content of D&C tree nodes
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
@@ -75,12 +77,7 @@ void create_elem_part (int *elemPart, int *nodePart, int *elemToNode, int nbElem
 void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart,
                     int *nodePartSize, int globalNbElem, int dimElem, int firstPart,
                     int lastPart, int firstElem, int lastElem, int firstNode,
-                    int lastNode, int sepOffset, int curNode, bool isSep
-#ifdef STATS
-                    , ofstream &dcFile, int LRS);
-#else
-                    );
-#endif
+                    int lastNode, int sepOffset, int curNode, bool isSep);
 
 // Create the D&C tree and the permutations
 void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank);
