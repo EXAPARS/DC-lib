@@ -59,7 +59,7 @@ extern "C" {
     void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
                             int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
                             int *nbElem, int *dimElem, int *nbBlocks, int *nbIntf,
-                            int *rank, int *nbIntfNodes);
+                            int *rank);
 
     // Create the D&C tree and the permutations
     void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,

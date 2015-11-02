@@ -88,10 +88,10 @@ void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf)
 void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
                         int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
                         int *nbElem, int *dimElem, int *nbBlocks, int *nbIntf,
-                        int *rank, int *nbIntfNodes)
+                        int *rank)
 {
     DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, intfDestOffsets,
-                      nbDCcomm, *nbElem, *dimElem, *nbBlocks, *nbIntf, *rank, *nbIntfNodes);
+                      nbDCcomm, *nbElem, *dimElem, *nbBlocks, *nbIntf, *rank);
 }
 
 // Create the D&C tree and the permutations
