@@ -86,11 +86,11 @@ void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf)
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                        int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
+                        int *intfNodes, int *intfDestIndex, int *nbDCcomm,
                         int *nbElem, int *dimElem, int *nbBlocks, int *nbIntf,
                         int *rank)
 {
-    DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, intfDestOffsets,
+    DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, intfDestIndex,
                       nbDCcomm, *nbElem, *dimElem, *nbBlocks, *nbIntf, *rank);
 }
 

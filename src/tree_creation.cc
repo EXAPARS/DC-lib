@@ -112,7 +112,7 @@ bool isDescendant (int curNode, int nodeID)
 
 // Initialize D&C tree interface for multithreaded communication
 void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
-                                int *intfNodes, int *intfDestOffsets, int *nbDCcomm,
+                                int *intfNodes, int *intfDestIndex, int *nbDCcomm,
                                 int dimElem, int nbIntf, int nbBlocks, int curNode,
                                 int curLevel, bool isLeaf)
 {
@@ -170,7 +170,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                             // interface
                             if ((j + 1) == intfNode) {
                                 tree.intfNodes[ctr] = intfNode;
-                                tree.intfDest [ctr] = intfDestOffsets[i] -
+                                tree.intfDest [ctr] = intfDestIndex[i] -
                                                       intfIndex[i] + k;
                                 ctr++;
                             }
@@ -234,7 +234,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                         // If D&C node is on the interface, add it to the D&C interface
                         if ((node + 1) == intfNode) {
                             tree.intfNodes[ctr] = intfNode;
-                            tree.intfDest [ctr] = intfDestOffsets[i] - intfIndex[i]+k;
+                            tree.intfDest [ctr] = intfDestIndex[i] - intfIndex[i]+k;
                             ctr++;
                         }
                         if (ctr == tree.nbIntfNodes) break;
@@ -317,7 +317,7 @@ void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int cu
 // the interface index for multithreaded communication, and the number of
 // communication per interface
 void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                    int *intfNodes, int *intfDestOffsets, int *nbDCintfNodes,
+                    int *intfNodes, int *intfDestIndex, int *nbDCintfNodes,
                     int *nbDCcomm, int dimElem, int nbBlocks, int nbIntf, int curNode,
                     int curLevel, int LRS, ofstream &dcFile)
 {
@@ -343,7 +343,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
 
             // Create the interface of current D&C leaf
             create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes,
-                                       intfDestOffsets, nbDCcomm, dimElem, nbIntf,
+                                       intfDestIndex, nbDCcomm, dimElem, nbIntf,
                                        nbBlocks, curNode, curLevel, true);
 
             // Number of interface nodes handled by current D&C leaf
@@ -367,7 +367,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
 
             // Create the interface of current D&C node
             create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes,
-                                       intfDestOffsets, nbDCcomm, dimElem, nbIntf,
+                                       intfDestIndex, nbDCcomm, dimElem, nbIntf,
                                        nbBlocks, curNode, curLevel, false);
         #endif
 
@@ -378,13 +378,13 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
             cilk_spawn
         #endif
         tree_finalize (*tree.right, nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                       intfDestOffsets, tree.nbRightIntfNodes, nbDCcomm, dimElem,
+                       intfDestIndex, tree.nbRightIntfNodes, nbDCcomm, dimElem,
                        nbBlocks, nbIntf, 3*curNode+2, curLevel+1, 2, dcFile);
         #ifdef OMP
             #pragma omp task default (shared)
         #endif
         tree_finalize (*tree.left, nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                       intfDestOffsets, tree.nbLeftIntfNodes, nbDCcomm, dimElem,
+                       intfDestIndex, tree.nbLeftIntfNodes, nbDCcomm, dimElem,
                        nbBlocks, nbIntf, 3*curNode+1, curLevel+1, 1, dcFile);
 
         // Synchronization
@@ -397,7 +397,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
             tree_finalize (*tree.sep, nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                           intfDestOffsets, tree.nbSepIntfNodes, nbDCcomm, dimElem,
+                           intfDestIndex, tree.nbSepIntfNodes, nbDCcomm, dimElem,
                            nbBlocks, nbIntf, 3*curNode+3, curLevel+1, 3, dcFile);
         }
 
@@ -413,7 +413,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
-                       int *intfNodes, int *intfDestOffsets, int *nbDCcomm, int nbElem,
+                       int *intfNodes, int *intfDestIndex, int *nbDCcomm, int nbElem,
                        int dimElem, int nbBlocks, int nbIntf, int rank)
 {
     // Create D&C tree dot file
@@ -439,7 +439,7 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
         #pragma omp single nowait
     #endif
     tree_finalize (*treeHead, nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                   intfDestOffsets, nbDCintfNodes, nbDCcomm, dimElem, nbBlocks,
+                   intfDestIndex, nbDCintfNodes, nbDCcomm, dimElem, nbBlocks,
                    nbIntf, 0, 0, -1, dcFile);
 
     #ifdef STATS
