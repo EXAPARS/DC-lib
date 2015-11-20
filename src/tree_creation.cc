@@ -51,8 +51,8 @@ void intf_offset_propagation (tree_t &tree, int *curOffset, int curLevel, int nb
 {
     // If current node is a leaf or is at the communication level
     if (tree.left == nullptr && tree.right == nullptr || curLevel == commLevel) {
+
         if (tree.nbIntfNodes > 0) {
-            tree.intfOffset = new int [nbIntf];
             for (int i = 0; i < nbIntf; i++) {
                 tree.intfOffset[i] = curOffset[i];
             }
@@ -146,9 +146,11 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
         if (tree.nbIntfNodes > 0) {
 
             // Allocate the multithreaded interface
-            tree.intfIndex = new int [nbIntf+1];
-            tree.intfNodes = new int [tree.nbIntfNodes];
-            tree.intfDest  = new int [tree.nbIntfNodes];
+            tree.intfIndex  = new int [nbIntf+1];
+            tree.intfNodes  = new int [tree.nbIntfNodes];
+            tree.intfDest   = new int [tree.nbIntfNodes];
+            tree.intfOffset = new int [nbIntf];
+            tree.commID     = new int [nbIntf] ();
             int ctr = 0;
 
             // Run through all interfaces
@@ -181,6 +183,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                 }
                 // Increment the number of communications for current interface
                 if (ctr > tree.intfIndex[i]) {
+                    tree.commID[i] = nbDCcomm[i];
                     pthread_mutex_lock (&DCcommMutex);
                     nbDCcomm[i]++;
                     pthread_mutex_unlock (&DCcommMutex);
@@ -215,9 +218,11 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
             int ctr = 0;
 
             // Allocate the multithreaded interface
-            tree.intfIndex = new int [nbIntf+1];
-            tree.intfNodes = new int [tree.nbIntfNodes];
-            tree.intfDest  = new int [tree.nbIntfNodes];
+            tree.intfIndex  = new int [nbIntf+1];
+            tree.intfNodes  = new int [tree.nbIntfNodes];
+            tree.intfDest   = new int [tree.nbIntfNodes];
+            tree.intfOffset = new int [nbIntf];
+            tree.commID     = new int [nbIntf] ();
 
             // Run through all interfaces
             for (int i = 0; i < nbIntf; i++) {
@@ -243,6 +248,7 @@ void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
                 }
                 // Increment the number of communications for current interface
                 if (ctr > tree.intfIndex[i]) {
+                    tree.commID[i] = nbDCcomm[i];
                     pthread_mutex_lock (&DCcommMutex);
                     nbDCcomm[i]++;
                     pthread_mutex_unlock (&DCcommMutex);
@@ -470,6 +476,7 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
     tree.intfNodes        = nullptr;
     tree.intfDest         = nullptr;
     tree.intfOffset       = nullptr;
+    tree.commID           = nullptr;
     tree.ownedNodes       = nullptr;
     tree.nbCurIntfNodes   = nullptr;
     tree.nbLeftIntfNodes  = nullptr;

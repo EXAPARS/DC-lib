@@ -25,7 +25,7 @@
 
 // D&C tree structure
 typedef struct tree_s {
-    int *intfIndex, *intfNodes, *intfDest, *intfOffset, *ownedNodes,
+    int *intfIndex, *intfNodes, *intfDest, *intfOffset, *commID, *ownedNodes,
         *nbCurIntfNodes, *nbLeftIntfNodes, *nbRightIntfNodes, *nbSepIntfNodes;
     int nbOwnedNodes, nbIntfNodes,
         firstElem, lastElem, lastSep,
@@ -50,7 +50,7 @@ typedef struct DCargs_s {
 
 // D&C arguments structure for multithreaded comm
 typedef struct DCcommArgs_s {
-    int *intfIndex, *intfNodes, *intfDest, *intfOffset;
+    int *intfIndex, *intfNodes, *intfDest, *intfOffset, *commID;
 } DCcommArgs_t;
 
 typedef struct {
