@@ -140,7 +140,7 @@ else
     else
         cmake -DGASPI_INCLUDE=$GASPI_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
               -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DSTATS=$STATS \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               . -G "Unix Makefiles"
     fi
 fi
