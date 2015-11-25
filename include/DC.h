@@ -131,10 +131,12 @@ void DC_renumber_int_array (int *tab, int size, bool isFortran);
 void DC_create_permutation (int *perm, int *part, int size, int nbPart);
 
 // Read the D&C tree and the permutation functions
-void DC_read_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf);
+void DC_read_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf,
+                   int *nbNotifications, int *nbMaxComm);
 
 // Store the D&C tree and the permutation functions to a binary file
-void DC_store_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf);
+void DC_store_tree (std::string &treePath, int nbElem, int nbNodes, int nbIntf,
+                    int nbNotifications, int nbMaxComm);
 
 // Wrapper used to get the root of the D&C tree before calling the real tree finalize
 void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,

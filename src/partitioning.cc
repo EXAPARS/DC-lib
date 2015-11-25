@@ -203,6 +203,16 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int ra
         nodePartSize[nodePart[i]]++;
     }
 
+    // Initialize the global element permutation
+    #ifdef OMP
+        #pragma omp parallel for
+        for (int i = 0; i < nbElem; i++) {
+    #elif CILK
+        cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
+        elemPerm[i] = i;
+    }
+
 	// Create D&C tree
 	#ifdef OMP
 		#pragma omp parallel

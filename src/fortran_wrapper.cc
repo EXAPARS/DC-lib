@@ -69,17 +69,20 @@ void dc_create_permutation_ (int *perm, int *part, int *size, int *nbPart)
 }
 
 // Read the D&C tree and the permutation functions
-void dc_read_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf)
+void dc_read_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf,
+                    int *nbNotifications, int *nbMaxComm)
 {
     std::string treePath_c (treePath);
-    DC_read_tree (treePath_c, *nbElem, *nbNodes, *nbIntf);
+    DC_read_tree (treePath_c, *nbElem, *nbNodes, *nbIntf, nbNotifications, nbMaxComm);
 }
 
 // Store the D&C tree and the permutation functions to a binary file
-void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf)
+void dc_store_tree_ (char *treePath, int *nbElem, int *nbNodes, int *nbIntf,
+                     int *nbNotifications, int *nbMaxComm)
 {
     std::string treePath_c (treePath);
-    DC_store_tree (treePath_c, *nbElem, *nbNodes, *nbIntf);
+    DC_store_tree (treePath_c, *nbElem, *nbNodes, *nbIntf, *nbNotifications,
+                   *nbMaxComm);
 }
 
 #ifdef TREE_CREATION

@@ -24,6 +24,7 @@ void DC_permute_double_2d_array (double *tab, int nbItem, int dimItem)
 	char   *checkPerm = new char   [nbItem] ();
 	double *tmpSrc    = new double [dimItem];
 	double *tmpDest   = new double [dimItem];
+
 	for (int i = 0; i < nbItem; i++) {
 		if (checkPerm[i] == 1) continue;
 
@@ -56,26 +57,26 @@ void DC_permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem, int 
     // If no permutation is given, default behavior is to use D&C elemPerm
     if (perm == nullptr) perm = elemPerm;
 
-	for (int i = 0; i < nbItem; i++) {
-		if (checkPerm[i] == 1) continue;
+    for (int i = 0; i < nbItem; i++) {
+        if (checkPerm[i] == 1) continue;
 
-		int init = i, src = i, dest;
-		for (int j = 0; j < dimItem; j++) {
-			tmpSrc[j] = tab[(i+offset)*dimItem+j];
-		}
-		do {
-			dest = perm[src];
-			for (int j = 0; j < dimItem; j++) {
-				tmpDest[j] = tab[(dest+offset)*dimItem+j];
-				tab[(dest+offset)*dimItem+j] = tmpSrc[j];
-				tmpSrc[j] = tmpDest[j];
-			}
-			src = dest;
-			checkPerm[src] = 1;
-		}
-		while (src != init);
-	}
-	delete[] tmpDest, delete[] tmpSrc, delete[] checkPerm;
+        int init = i, src = i, dest;
+        for (int j = 0; j < dimItem; j++) {
+            tmpSrc[j] = tab[(i+offset)*dimItem+j];
+        }
+        do {
+            dest = perm[src];
+            for (int j = 0; j < dimItem; j++) {
+                tmpDest[j] = tab[(dest+offset)*dimItem+j];
+                tab[(dest+offset)*dimItem+j] = tmpSrc[j];
+                tmpSrc[j] = tmpDest[j];
+            }
+            src = dest;
+            checkPerm[src] = 1;
+        }
+        while (src != init);
+    }
+    delete[] tmpDest, delete[] tmpSrc, delete[] checkPerm;
 }
 
 // Permute "tab" 1D array of int using node permutation
@@ -105,27 +106,27 @@ void DC_permute_int_1d_array (int *tab, int size)
 // Renumber "tab" array of int using node permutation
 void DC_renumber_int_array (int *tab, int size, bool isFortran)
 {
-	for (int i = 0; i < size; i++) {
-		int tmp = tab[i];
-		if (isFortran) tmp--;
-		tab[i] = nodePerm[tmp];
-		if (isFortran) tab[i]++;
-	}
+    for (int i = 0; i < size; i++) {
+        int tmp = tab[i];
+        if (isFortran) tmp--;
+        tab[i] = nodePerm[tmp];
+        if (isFortran) tab[i]++;
+    }
 }
 
 // Apply local element permutation to global element permutation
 void merge_permutations (int *localElemPerm, int globalNbElem, int localNbElem,
 						 int firstElem, int lastElem)
 {
-	int ctr = 0;
-	for (int i = 0; i < globalNbElem; i++) {
-		int dest = elemPerm[i];
-		if (dest >= firstElem && dest <= lastElem) {
-			elemPerm[i] = localElemPerm[dest-firstElem] + firstElem;
-			ctr++;
-		}
-		if (ctr == localNbElem)	break;
-	}
+    int ctr = 0;
+    for (int i = 0; i < globalNbElem; i++) {
+        int dest = elemPerm[i];
+        if (dest >= firstElem && dest <= lastElem) {
+            elemPerm[i] = localElemPerm[dest-firstElem] + firstElem;
+            ctr++;
+        }
+        if (ctr == localNbElem)	break;
+    }
 }
 
 #ifdef DC_VEC

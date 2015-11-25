@@ -26,12 +26,14 @@ using namespace std;
 void recursive_reading (tree_t &tree, ifstream &treeFile, int nbIntf);
 
 // Read the D&C tree and the permutation functions
-void DC_read_tree (string &treePath, int nbElem, int nbNodes, int nbIntf);
+void DC_read_tree (string &treePath, int nbElem, int nbNodes, int nbIntf,
+                   int *nbNotifications, int *nbMaxComm);
 
 // Store recursively each node of the D&C tree
 void recursive_storing (tree_t &tree, ofstream &treeFile, int nbIntf);
 
 // Store the D&C tree and the permutation functions to a binary file
-void DC_store_tree (string &treePath, int nbElem, int nbNodes, int nbIntf);
+void DC_store_tree (string &treePath, int nbElem, int nbNodes, int nbIntf,
+                    int nbNotifications, int nbMaxComm);
 
 #endif
