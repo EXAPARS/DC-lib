@@ -167,7 +167,7 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
 }
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank)
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
     // Fortran to C elemToNode conversion
     #ifdef OMP

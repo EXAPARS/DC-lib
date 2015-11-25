@@ -672,7 +672,7 @@ void tree_creation (tree_t &tree, int *elemToNode, int *sepToNode, int *nodePart
 }
 
 // Create the D&C tree and the permutations
-void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank)
+void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes)
 {
     // Allocate the D&C tree & the permutation functions
     treeHead = new tree_t;
@@ -685,7 +685,7 @@ void DC_create_tree (int *elemToNode, int nbElem, int dimElem, int nbNodes, int 
     #endif
 
     // Create the D&C tree & the permutation functions
-    partitioning (elemToNode, nbElem, dimElem, nbNodes, rank);
+    partitioning (elemToNode, nbElem, dimElem, nbNodes);
 
     // Vectorial version with coloring of the leaves of the D&C tree
     #ifdef DC_VEC

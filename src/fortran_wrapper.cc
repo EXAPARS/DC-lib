@@ -98,10 +98,9 @@ void dc_finalize_tree_ (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
 }
 
 // Create the D&C tree and the permutations
-void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes,
-                      int *rank)
+void dc_create_tree_ (int *elemToNode, int *nbElem, int *dimElem, int *nbNodes)
 {
-    DC_create_tree (elemToNode, *nbElem, *dimElem, *nbNodes, *rank);
+    DC_create_tree (elemToNode, *nbElem, *dimElem, *nbNodes);
 }
 
 #endif

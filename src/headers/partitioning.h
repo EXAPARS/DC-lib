@@ -37,6 +37,6 @@ void sep_partitioning (tree_t &tree, int *elemToNode, int globalNbElem, int dimE
                        int curNode);
 
 // Divide & Conquer partitioning
-void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes, int rank);
+void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes);
 
 #endif
