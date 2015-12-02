@@ -17,9 +17,20 @@
 #ifndef DC_F_H
 #define DC_F_H
 
+#include <stdarg.h>
 #include "DC.h"
 
 extern "C" {
+/*
+    // Get the list of user arguments
+    void dc_get_args_ (uint64_t *argsList, int *size, ...);
+
+    // Set the list of user arguments
+    void dc_set_args_ (uint64_t *argsList, int *size, ...);
+
+    // Initialize the list of user arguments
+    uint64_t* dc_init_args_list_ (int *size);
+*/
     // Get time of day
     double dc_get_time_ ();
 

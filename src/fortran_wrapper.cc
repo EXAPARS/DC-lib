@@ -16,7 +16,50 @@
 
 #include <string>
 #include "DC_f.h"
+/*
+// Get the list of user arguments
+void dc_get_args_ (uint64_t *argsList, int *size, ...)
+{
+    va_list userArgs;
+    va_start (userArgs, *size);
 
+    for (int i = 0; i < (*size); i++) {
+        uint64_t **tmpArg = (uint64_t**)va_arg (userArgs, void*);
+
+fprintf (stderr, "C recoit l'adr %lu\n", tmpArg);
+
+        *tmpArg = (uint64_t*)argsList[i];
+
+fprintf (stderr, "C envoie l'arg %lu\n", *tmpArg);
+
+    }
+
+    va_end (userArgs);
+}
+
+// Set the list of user arguments
+void dc_set_args_ (uint64_t *argsList, int *size, ...)
+{
+    va_list userArgs;
+    va_start (userArgs, *size);
+
+    for (int i = 0; i < (*size); i++) {
+        argsList[i] = (uint64_t)va_arg (userArgs, void*);
+
+fprintf (stderr, "C genere l'arg %lu\n", argsList[i]);
+
+    }
+
+    va_end (userArgs);
+}
+
+// Initialize the list of user arguments
+uint64_t* dc_init_args_list_ (int *size)
+{
+    uint64_t *argsList = new uint64_t [*size];
+    return argsList;
+}
+*/
 // Get CPU cycles
 uint64_t dc_get_cycles_ ()
 {

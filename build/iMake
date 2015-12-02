@@ -34,15 +34,15 @@ if [ $# -eq 0 ]; then
 fi
 
 # Parse arguments
-DISTRI=0
-SHARED=0
+BULK=0
 VECTO=0
 ARCHI=0
-BULK=0
 TREE=0
 STATS=0
 DEBUG=0
 VERBOSE=0
+DISTRI=0
+SHARED=0
 
 for i in $@; do
     if [[ $i == "clean" ]]; then
@@ -55,6 +55,24 @@ for i in $@; do
               external_files.mod mod_qvddump.mod 2> /dev/null
         echo -e "\\033[1;32mBuild & lib directories have been cleaned up\\033[0;39m"
         exit
+    elif [[ $i == "bulk" ]]; then
+        BULK=1
+    elif [[ $i == "vec" ]] || [[ $i == "vecto" ]]; then
+        VECTO=1
+    elif [[ $i == "sse" ]]; then
+        ARCHI="SSE"
+    elif [[ $i == "avx" ]]; then
+        ARCHI="AVX"
+    elif [[ $i == "mic" ]]; then
+        ARCHI="MIC"
+    elif [[ $i == "tree" ]]; then
+        TREE=1
+    elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
+        STATS=1
+    elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
+        DEBUG=1
+    elif [[ $i == "verbose" ]]; then
+        VERBOSE=1
     elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
         DISTRI="XMPI"
         BULK=1
@@ -64,30 +82,20 @@ for i in $@; do
         SHARED="CILK"
     elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
         SHARED="OMP"
-    elif [[ $i == "vec" ]] || [[ $i == "vecto" ]]; then
-        VECTO=1
-    elif [[ $i == "sse" ]]; then
-        ARCHI="SSE"
-    elif [[ $i == "avx" ]]; then
-        ARCHI="AVX"
-    elif [[ $i == "mic" ]]; then
-        ARCHI="MIC"
-    elif [[ $i == "bulk" ]]; then
-        BULK=1
-    elif [[ $i == "tree" ]]; then
-        TREE=1
-    elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
-        STATS=1
-    elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
-        DEBUG=1
-    elif [[ $i == "verbose" ]]; then
-        VERBOSE=1
     else
    	    echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
     fi
 done
 
 # Check arguments
+if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
+    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
+    exit
+fi
+if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
+    echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
+    exit
+fi
 if [[ $DISTRI != "xmpi" ]] && [[ $DISTRI != "gaspi" ]]; then
     echo -e "\\033[1;31mPlease specify the distributed memory library (MPI or GASPI) \
              \\033[0;39m"
@@ -96,14 +104,6 @@ fi
 if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
     echo -e "\\033[1;31mPlease specify the shared memory runtime (Cilk or OpenMP) \
              \\033[0;39m"
-    exit
-fi
-if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
-    exit
-fi
-if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
-    echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
     exit
 fi
 
