@@ -29,6 +29,9 @@
 #include "tools.h"
 
 extern tree_t *treeHead;
+#ifdef MULTITHREADED_COMM
+    extern int commLevel;
+#endif
 
 /*****************************************************************************/
 /***********                        Timer                          ***********/
@@ -257,14 +260,14 @@ void store_intf_stats (int nbElem, int rank)
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
-void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int LRS,
-                          bool hasIntfNode)
+void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int curLevel,
+                          int LRS, bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " [label=\"" << curNode << "\\n["
 		   << tree.firstElem << "," << tree.lastElem << "]\\n["
 		   << tree.firstNode << "," << tree.lastNode << "]\"";
 
-    if (hasIntfNode)   dcFile << ", color=red];\n";
+    if (hasIntfNode && curLevel <= commLevel) dcFile << ", color=red];\n";
 	else if (LRS == 1) dcFile << ", color=turquoise4];\n";
 	else if (LRS == 2) dcFile << ", color=lightskyblue];\n";
 	else if (LRS == 3) dcFile << ", color=grey];\n";
@@ -272,7 +275,8 @@ void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int LRS,
 }
 
 // Fill the nodes of the D&C tree dot file
-void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, bool hasIntfNode)
+void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, int curLevel,
+                         bool hasIntfNode)
 {
 	dcFile << "\t" << curNode << " -> {" << 3*curNode+1 << "; " << 3*curNode+2;
 	if (tree.sep != nullptr) dcFile << "; " << 3*curNode+3 << ";}\n\t";
@@ -280,8 +284,8 @@ void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, bool hasIn
 	dcFile << curNode << " [label=\"" << curNode << "\\n[" << tree.firstElem
 		   << "," << tree.lastElem << "," << tree.lastSep << "]\\n["
            << tree.firstNode << "," << tree.lastNode << "]\", style=rounded";
-    if (hasIntfNode) dcFile << ", color=red];\n";
-    else             dcFile << "];\n";
+    if (hasIntfNode && curLevel <= commLevel) dcFile << ", color=red];\n";
+    else                                      dcFile << "];\n";
 }
 
 // Detect if given D&C node has nodes on the interface

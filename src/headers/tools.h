@@ -71,11 +71,12 @@ void store_intf_stats (int nbElem, int rank);
 /*****************************************************************************/
 
 // Fill the leaves of the D&C tree dot file
-void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int LRS,
-                          bool hasIntfNode);
+void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int curLevel,
+                          int LRS, bool hasIntfNode);
 
 // Fill the nodes of the D&C tree dot file
-void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode,bool hasIntfNode);
+void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, int curLevel,
+                         bool hasIntfNode);
 
 // Detect if given D&C node has nodes on the interface
 bool has_intf_node (tree_t &tree, int *intfIndex, int *intfNodes, int nbIntf);

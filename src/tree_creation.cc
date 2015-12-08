@@ -336,7 +336,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
 
         #ifdef STATS
             bool hasIntfNode = has_intf_node (tree, intfIndex, intfNodes, nbIntf);
-            fill_dc_file_leaves (tree, dcFile, curNode, LRS, hasIntfNode);
+            fill_dc_file_leaves (tree, dcFile, curNode, curLevel, LRS, hasIntfNode);
             count_intf_stats (hasIntfNode);
         #endif
 
@@ -361,7 +361,7 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
     else {
         #ifdef STATS
             bool hasIntfNode = has_intf_node (tree, intfIndex, intfNodes, nbIntf);
-            fill_dc_file_nodes (tree, dcFile, curNode, hasIntfNode);
+            fill_dc_file_nodes (tree, dcFile, curNode, curLevel, hasIntfNode);
         #endif
 
         #ifdef MULTITHREADED_COMM
