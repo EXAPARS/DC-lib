@@ -267,8 +267,13 @@ void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int curLe
 		   << tree.firstElem << "," << tree.lastElem << "]\\n["
 		   << tree.firstNode << "," << tree.lastNode << "]\"";
 
-    if (hasIntfNode && curLevel <= commLevel) dcFile << ", color=red];\n";
-	else if (LRS == 1) dcFile << ", color=turquoise4];\n";
+    #ifdef MULTITHREADED_COMM
+        if (hasIntfNode && curLevel <= commLevel) {
+            dcFile << ", color=red];\n";
+            return;
+        }
+    #endif
+	if      (LRS == 1) dcFile << ", color=turquoise4];\n";
 	else if (LRS == 2) dcFile << ", color=lightskyblue];\n";
 	else if (LRS == 3) dcFile << ", color=grey];\n";
 	else			   dcFile << ", shape=circle, color=red];\n";
@@ -284,8 +289,13 @@ void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, int curLev
 	dcFile << curNode << " [label=\"" << curNode << "\\n[" << tree.firstElem
 		   << "," << tree.lastElem << "," << tree.lastSep << "]\\n["
            << tree.firstNode << "," << tree.lastNode << "]\", style=rounded";
-    if (hasIntfNode && curLevel <= commLevel) dcFile << ", color=red];\n";
-    else                                      dcFile << "];\n";
+    #ifdef MULTITHREADED_COMM
+        if (hasIntfNode && curLevel <= commLevel) {
+            dcFile << ", color=red];\n";
+            return;
+        }
+    #endif
+    dcFile << "];\n";
 }
 
 // Detect if given D&C node has nodes on the interface
