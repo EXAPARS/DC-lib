@@ -213,24 +213,24 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
         elemPerm[i] = i;
     }
 
-	// Create D&C tree
-	#ifdef OMP
-		#pragma omp parallel
-		#pragma omp single nowait
+    // Create D&C tree
+    #ifdef OMP
+        #pragma omp parallel
+        #pragma omp single nowait
     #endif
     tree_creation (*treeHead, elemToNode, nullptr, nodePart, nodePartSize, nbElem,
                    dimElem, 0, nbPart-1, 0, nbElem-1, 0, nbNodes-1, 0, 0, false);
     delete[] nodePartSize, delete[] nodePart;
 
-	// C to Fortran elemToNode conversion
+    // C to Fortran elemToNode conversion
     #ifdef OMP
         #pragma omp parallel for
-	    for (int i = 0; i < nbElem * dimElem; i++) {
+        for (int i = 0; i < nbElem * dimElem; i++) {
     #elif CILK
     	cilk_for (int i = 0; i < nbElem * dimElem; i++) {
     #endif	
-	    elemToNode[i]++;
-	}
+        elemToNode[i]++;
+    }
 }
 
 #endif

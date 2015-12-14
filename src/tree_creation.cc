@@ -507,6 +507,7 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
 }
 
 #ifdef MULTITHREADED_COMM
+
 // Set the last updater of each node. The owners are the closer leaves to the root.
 void fill_node_owner (int *elemToNode, int firstElem, int lastElem, int dimElem,
                       int firstNode, int lastNode, int curNode, bool isSep)
@@ -539,6 +540,7 @@ void init_node_owner (int nbNodes)
         nodeOwner[i] = INT_MAX;
     }
 }
+
 #endif
 
 // Create element partition & count left & separator elements
