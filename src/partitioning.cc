@@ -186,7 +186,7 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     int *graphValue = new int [nbNodes * 15];
     int *nodePart   = new int [nbNodes];
     #ifdef MULTITHREADED_COMM
-        commLevel = ceil ((double)log2 (nbPart) / 4.);
+        commLevel = ceil ((double)log2 (nbPart) / 3.);
     #endif
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue, nullptr,

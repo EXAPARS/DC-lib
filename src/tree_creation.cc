@@ -28,10 +28,11 @@
 #include "partitioning.h"
 #include "tree_creation.h"
 
-// Global variables used in order to persist from one call to the library to another
-// D&C tree and the permutations
+// Global variables used in order to persist from one call to the library to another.
+// D&C tree, permutations, and max level for comm
 tree_t *treeHead = nullptr;
 int *elemPerm = nullptr, *nodePerm = nullptr;
+int commLevel = 0;
 
 #ifdef TREE_CREATION
 
@@ -40,10 +41,8 @@ pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef MULTITHREADED_COMM
 
-// List containing the last updater of each node, number of D&C node doing comm,
-// D&C tree max level for comm, and comm counter mutex
+// List containing the last updater of each node, and comm counter mutex
 int *nodeOwner = nullptr;
-int commLevel = 0;
 pthread_mutex_t DCcommMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Compute the offset of the interface in the GASPI segment for each D&C node
