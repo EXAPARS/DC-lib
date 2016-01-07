@@ -26,7 +26,7 @@
 // D&C tree structure
 typedef struct tree_s {
     int *intfIndex, *intfNodes, *intfDest, *intfOffset, *commID, *ownedNodes,
-        *nbCurIntfNodes, *nbLeftIntfNodes, *nbRightIntfNodes, *nbSepIntfNodes;
+        *nbLeftIntfNodes, *nbRightIntfNodes, *nbSepIntfNodes;
     int nbOwnedNodes, nbIntfNodes,
         firstElem, lastElem, lastSep,
         firstNode, lastNode,

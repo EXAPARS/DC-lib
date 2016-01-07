@@ -46,11 +46,10 @@ int *nodeOwner = nullptr;
 pthread_mutex_t DCcommMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Compute the offset of the interface in the GASPI segment for each D&C node
-void intf_offset_propagation (tree_t &tree, int *curOffset, int curLevel, int nbIntf)
+void intf_offset_propagation (tree_t &tree, int *curOffset, int nbIntf)
 {
-    // If current node is a leaf or is at the communication level
-    if (tree.left == nullptr && tree.right == nullptr || curLevel == commLevel) {
-
+    // If current node is a leaf
+    if (tree.left == nullptr && tree.right == nullptr) {
         if (tree.nbIntfNodes > 0) {
             for (int i = 0; i < nbIntf; i++) {
                 tree.intfOffset[i] = curOffset[i];
@@ -63,7 +62,7 @@ void intf_offset_propagation (tree_t &tree, int *curOffset, int curLevel, int nb
         int *rightOffset = new int [nbIntf] ();
         int *sepOffset   = new int [nbIntf] ();
         for (int i = 0; i < nbIntf; i++) {
-            leftOffset[i]  = curOffset[i]   + tree.nbCurIntfNodes[i];
+            leftOffset[i]  = curOffset[i];
             rightOffset[i] = leftOffset[i]  + tree.nbLeftIntfNodes[i];
             sepOffset[i]   = rightOffset[i] + tree.nbRightIntfNodes[i];
         }
@@ -71,32 +70,29 @@ void intf_offset_propagation (tree_t &tree, int *curOffset, int curLevel, int nb
         #ifdef OMP
             // Left & right recursion
             #pragma omp task default (shared)
-            intf_offset_propagation (*tree.right, rightOffset, curLevel+1, nbIntf);
+            intf_offset_propagation (*tree.right, rightOffset, nbIntf);
             #pragma omp task default (shared)
-            intf_offset_propagation (*tree.left, leftOffset, curLevel+1, nbIntf);
+            intf_offset_propagation (*tree.left, leftOffset, nbIntf);
             // Synchronization
             #pragma omp taskwait
         #elif CILK
             // Left & right recursion
             cilk_spawn
-            intf_offset_propagation (*tree.right, rightOffset, curLevel+1, nbIntf);
-            intf_offset_propagation (*tree.left, leftOffset, curLevel+1, nbIntf);
+            intf_offset_propagation (*tree.right, rightOffset, nbIntf);
+            intf_offset_propagation (*tree.left, leftOffset, nbIntf);
             // Synchronization
             cilk_sync;
         #endif
+
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
-            intf_offset_propagation (*tree.sep, sepOffset, curLevel+1, nbIntf);
+            intf_offset_propagation (*tree.sep, sepOffset, nbIntf);
         }
-        delete[] sepOffset, delete[] rightOffset, delete[] leftOffset;
-    }
 
-    // If current node is not a leaf
-    if (tree.left != nullptr || tree.right != nullptr) {
+        delete[] sepOffset, delete[] rightOffset, delete[] leftOffset;
         delete[] tree.nbSepIntfNodes, delete[] tree.nbRightIntfNodes;
         delete[] tree.nbLeftIntfNodes;
     }
-    delete[] tree.nbCurIntfNodes;
 }
 
 // Determine if nodeID is a descendant of current node
@@ -110,151 +106,72 @@ bool isDescendant (int curNode, int nodeID)
 }
 
 // Initialize D&C tree interface for multithreaded communication
-void create_multithreaded_intf (tree_t &tree, int *elemToNode, int *intfIndex,
-                                int *intfNodes, int *intfDestIndex, int *nbDCcomm,
-                                int dimElem, int nbIntf, int nbBlocks, int curNode,
-                                int curLevel, bool isLeaf)
+void create_multithreaded_intf (tree_t &tree, int *intfIndex, int *intfNodes,
+                                int *intfDestIndex, int *nbDCintfNodes, int *nbDCcomm,
+                                int nbIntf, int nbBlocks)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
-    // If current D&C node is at communication level
-    if (!isLeaf && curLevel == commLevel) {
+    // Run through all current D&C leaf nodes
+    for (int i = 0; i < tree.nbOwnedNodes; i++) {
+        int node = tree.ownedNodes[i];
 
-        // Run through all its nodes
-        for (int i = tree.firstNode; i <= tree.lastNode; i++) {
+        // Run through all interface nodes
+        for (int j = 0; j < nbIntf; j++) {
+            for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
 
-            // Check if nodes are owned by current D&C node or a descendant
-            if (nodeOwner[i] == curNode || isDescendant (curNode, nodeOwner[i])) {
-
-                // Run through all interface nodes
-                for (int j = 0; j < nbIntf; j++) {
-                    for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
-
-                        // Count the number of nodes on the D&C interface
-                        if ((i + 1) == intfNodes[k]) {
-                            tree.nbCurIntfNodes[j]++;
-                            tree.nbIntfNodes++;
-                        }
-                    }
+                // Count the number of nodes on the D&C interface
+                if ((node + 1) == intfNodes[k]) {
+                    tree.nbIntfNodes++;
+                    nbDCintfNodes[j]++;
                 }
             }
-        }
-
-        // If there are owned nodes on the interface
-        if (tree.nbIntfNodes > 0) {
-
-            // Allocate the multithreaded interface
-            tree.intfIndex  = new int [nbIntf+1];
-            tree.intfNodes  = new int [tree.nbIntfNodes];
-            tree.intfDest   = new int [tree.nbIntfNodes];
-            tree.intfOffset = new int [nbIntf];
-            tree.commID     = new int [nbIntf] ();
-            int ctr = 0;
-
-            // Run through all interfaces
-            for (int i = 0; i < nbIntf; i++) {
-                tree.intfIndex[i] = ctr;
-
-                // Run through all nodes accessed by current D&C node
-                for (int j = tree.firstNode; j <= tree.lastNode; j++) {
-
-                    // Check if nodes are owned by current D&C node or a descendant
-                    if (nodeOwner[j] == curNode ||
-                        isDescendant (curNode, nodeOwner[j])) {
-
-                        // Run through all interface nodes
-                        for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                            int intfNode = intfNodes[k];
-
-                            // If D&C node is on the interface, add it to the D&C
-                            // interface
-                            if ((j + 1) == intfNode) {
-                                tree.intfNodes[ctr] = intfNode;
-                                tree.intfDest [ctr] = intfDestIndex[i] -
-                                                      intfIndex[i] + k;
-                                ctr++;
-                            }
-                            if (ctr == tree.nbIntfNodes) break;
-                        }
-                    }
-                    if (ctr == tree.nbIntfNodes) break;
-                }
-                // Increment the number of communications for current interface
-                if (ctr > tree.intfIndex[i]) {
-                    tree.commID[i] = nbDCcomm[i];
-                    pthread_mutex_lock (&DCcommMutex);
-                    nbDCcomm[i]++;
-                    pthread_mutex_unlock (&DCcommMutex);
-                }
-            }
-            tree.intfIndex[nbIntf] = ctr;
         }
     }
 
-    // If current node is a leaf at/upper communication level
-    else if (isLeaf && curLevel <= commLevel) {
+    // If there are owned nodes on the interface
+    if (tree.nbIntfNodes > 0) {
+        int ctr = 0;
 
-        // Run through all its owned nodes
-        for (int i = 0; i < tree.nbOwnedNodes; i++) {
-            int node = tree.ownedNodes[i];
+        // Allocate the multithreaded interface
+        tree.intfIndex  = new int [nbIntf+1];
+        tree.intfNodes  = new int [tree.nbIntfNodes];
+        tree.intfDest   = new int [tree.nbIntfNodes];
+        tree.intfOffset = new int [nbIntf];
+        tree.commID     = new int [nbIntf] ();
 
-            // Run through all interface nodes
-            for (int j = 0; j < nbIntf; j++) {
-                for (int k = intfIndex[j]; k < intfIndex[j+1]; k++) {
+        // Run through all interfaces
+        for (int i = 0; i < nbIntf; i++) {
+            tree.intfIndex[i] = ctr;
 
-                    // Count the number of nodes on the D&C interface
-                    if ((node + 1) == intfNodes[k]) {
-                        tree.nbCurIntfNodes[j]++;
-                        tree.nbIntfNodes++;
-                    }
-                }
-            }
-        }
+            // Run through all nodes owned by current D&C leaf
+            for (int j = 0; j < tree.nbOwnedNodes; j++) {
+                int node = tree.ownedNodes[j];
 
-        // If there are owned nodes on the interface
-        if (tree.nbIntfNodes > 0) {
-            int ctr = 0;
+                // Run through all interface nodes
+                for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
+                    int intfNode = intfNodes[k];
 
-            // Allocate the multithreaded interface
-            tree.intfIndex  = new int [nbIntf+1];
-            tree.intfNodes  = new int [tree.nbIntfNodes];
-            tree.intfDest   = new int [tree.nbIntfNodes];
-            tree.intfOffset = new int [nbIntf];
-            tree.commID     = new int [nbIntf] ();
-
-            // Run through all interfaces
-            for (int i = 0; i < nbIntf; i++) {
-                tree.intfIndex[i] = ctr;
-
-                // Run through all nodes owned by current D&C leaf
-                for (int j = 0; j < tree.nbOwnedNodes; j++) {
-                    int node = tree.ownedNodes[j];
-
-                    // Run through all interface nodes
-                    for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                        int intfNode = intfNodes[k];
-
-                        // If D&C node is on the interface, add it to the D&C interface
-                        if ((node + 1) == intfNode) {
-                            tree.intfNodes[ctr] = intfNode;
-                            tree.intfDest [ctr] = intfDestIndex[i] - intfIndex[i]+k;
-                            ctr++;
-                        }
-                        if (ctr == tree.nbIntfNodes) break;
+                    // If D&C node is on the interface, add it to the D&C interface
+                    if ((node + 1) == intfNode) {
+                        tree.intfNodes[ctr] = intfNode;
+                        tree.intfDest [ctr] = intfDestIndex[i] - intfIndex[i] + k;
+                        ctr++;
                     }
                     if (ctr == tree.nbIntfNodes) break;
                 }
-                // Increment the number of communications for current interface
-                if (ctr > tree.intfIndex[i]) {
-                    tree.commID[i] = nbDCcomm[i];
-                    pthread_mutex_lock (&DCcommMutex);
-                    nbDCcomm[i]++;
-                    pthread_mutex_unlock (&DCcommMutex);
-                }
+                if (ctr == tree.nbIntfNodes) break;
             }
-            tree.intfIndex[nbIntf] = ctr;
+            // Increment the number of communications for current interface
+            if (ctr > tree.intfIndex[i]) {
+                tree.commID[i] = nbDCcomm[i];
+                pthread_mutex_lock (&DCcommMutex);
+                nbDCcomm[i]++;
+                pthread_mutex_unlock (&DCcommMutex);
+            }
         }
+        tree.intfIndex[nbIntf] = ctr;
     }
 }
 
@@ -319,8 +236,8 @@ void create_owned_nodes_list (tree_t &tree, int *elemToNode, int dimElem, int cu
 #endif
 
 // Compute the edge interval, the list of nodes owned by each leaf of the D&C tree,
-// the interface index for multithreaded communication, and the number of
-// communication per interface
+// the interface index for multithreaded communication, and the number of communication
+// per interface
 void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intfIndex,
                     int *intfNodes, int *intfDestIndex, int *nbDCintfNodes,
                     int *nbDCcomm, int dimElem, int nbBlocks, int nbIntf, int curNode,
@@ -340,21 +257,12 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
         #endif
 
         #ifdef MULTITHREADED_COMM
-            // Initialize the counter of interface nodes
-            tree.nbCurIntfNodes = new int [nbIntf] ();
-
             // Create the list of nodes last updated by current D&C leaf
             create_owned_nodes_list (tree, elemToNode, dimElem, curNode);
 
             // Create the interface of current D&C leaf
-            create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes,
-                                       intfDestIndex, nbDCcomm, dimElem, nbIntf,
-                                       nbBlocks, curNode, curLevel, true);
-
-            // Number of interface nodes handled by current D&C leaf
-            for (int i = 0; i < nbIntf; i++) {
-                nbDCintfNodes[i] = tree.nbCurIntfNodes[i];
-            }
+            create_multithreaded_intf (tree, intfIndex, intfNodes, intfDestIndex,
+                                       nbDCintfNodes, nbDCcomm, nbIntf, nbBlocks);
         #endif
     }
     else {
@@ -363,17 +271,11 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
             fill_dc_file_nodes (tree, dcFile, curNode, curLevel, hasIntfNode);
         #endif
 
+        // Initialize the counters of interface nodes
         #ifdef MULTITHREADED_COMM
-            // Initialize the counters of interface nodes
-            tree.nbCurIntfNodes   = new int [nbIntf] ();
             tree.nbLeftIntfNodes  = new int [nbIntf] ();
             tree.nbRightIntfNodes = new int [nbIntf] ();
             tree.nbSepIntfNodes   = new int [nbIntf] ();
-
-            // Create the interface of current D&C node
-            create_multithreaded_intf (tree, elemToNode, intfIndex, intfNodes,
-                                       intfDestIndex, nbDCcomm, dimElem, nbIntf,
-                                       nbBlocks, curNode, curLevel, false);
         #endif
 
         // Left & right recursion
@@ -406,11 +308,11 @@ void tree_finalize (tree_t &tree, int *nodeToNodeRow, int *elemToNode, int *intf
                            nbBlocks, nbIntf, 3*curNode+3, curLevel+1, 3, dcFile);
         }
 
+        // Number of interface nodes handled by current D&C subtree
         #ifdef MULTITHREADED_COMM
-            // Number of interface nodes handled by current D&C node and its subtree
             for (int i = 0; i < nbIntf; i++) {
-                nbDCintfNodes[i] = tree.nbCurIntfNodes[i] + tree.nbLeftIntfNodes[i] +
-                                   tree.nbRightIntfNodes[i] + tree.nbSepIntfNodes[i];
+                nbDCintfNodes[i] = tree.nbLeftIntfNodes[i] + tree.nbRightIntfNodes[i] +
+                                   tree.nbSepIntfNodes[i];
             }
         #endif
     }
@@ -461,7 +363,7 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
             #pragma omp single nowait
         #endif
         // Compute the offset of the interface in the GASPI segment for each D&C node
-        intf_offset_propagation (*treeHead, offset, 0, nbIntf);
+        intf_offset_propagation (*treeHead, offset, nbIntf);
 
         delete[] offset;
     #endif
@@ -477,7 +379,6 @@ void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
     tree.intfOffset       = nullptr;
     tree.commID           = nullptr;
     tree.ownedNodes       = nullptr;
-    tree.nbCurIntfNodes   = nullptr;
     tree.nbLeftIntfNodes  = nullptr;
     tree.nbRightIntfNodes = nullptr;
     tree.nbSepIntfNodes   = nullptr;

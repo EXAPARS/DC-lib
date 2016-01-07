@@ -95,24 +95,12 @@ void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
             // Synchronization
             cilk_sync;
         #endif
+
         // Separator recursion, if it is not empty
         if (tree.sep != nullptr) {
             tree_traversal (userSeqFct, userVecFct, userCommFct, userArgs,
                             userCommArgs, *tree.sep);
         }
-
-        // Call user communication function
-        #ifdef MULTITHREADED_COMM
-            if (tree.nbIntfNodes > 0) {
-                DCcommArgs_t DCcommArgs;
-                DCcommArgs.intfIndex  = tree.intfIndex;
-                DCcommArgs.intfNodes  = tree.intfNodes;
-                DCcommArgs.intfDest   = tree.intfDest;
-                DCcommArgs.intfOffset = tree.intfOffset;
-                DCcommArgs.commID     = tree.commID;
-                userCommFct (userCommArgs, &DCcommArgs);
-            }
-        #endif
     }
 }
 
