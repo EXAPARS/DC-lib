@@ -67,8 +67,7 @@ void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
                 DCcommArgs_t DCcommArgs;
                 DCcommArgs.intfIndex  = tree.intfIndex;
                 DCcommArgs.intfNodes  = tree.intfNodes;
-                DCcommArgs.intfDest   = tree.intfDest;
-                DCcommArgs.intfOffset = tree.intfOffset;
+                DCcommArgs.intfDst    = tree.intfDst;
                 DCcommArgs.commID     = tree.commID;
                 userCommFct (userCommArgs, &DCcommArgs);
             }

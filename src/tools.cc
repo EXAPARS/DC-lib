@@ -29,9 +29,6 @@
 #include "tools.h"
 
 extern tree_t *treeHead;
-#ifdef MULTITHREADED_COMM
-    extern int commLevel;
-#endif
 
 /*****************************************************************************/
 /***********                        Timer                          ***********/
@@ -267,12 +264,6 @@ void fill_dc_file_leaves (tree_t &tree, ofstream &dcFile, int curNode, int curLe
 		   << tree.firstElem << "," << tree.lastElem << "]\\n["
 		   << tree.firstNode << "," << tree.lastNode << "]\"";
 
-    #ifdef MULTITHREADED_COMM
-        if (hasIntfNode && curLevel <= commLevel) {
-            dcFile << ", color=red];\n";
-            return;
-        }
-    #endif
 	if      (LRS == 1) dcFile << ", color=turquoise4];\n";
 	else if (LRS == 2) dcFile << ", color=lightskyblue];\n";
 	else if (LRS == 3) dcFile << ", color=grey];\n";
@@ -289,12 +280,6 @@ void fill_dc_file_nodes (tree_t &tree, ofstream &dcFile, int curNode, int curLev
 	dcFile << curNode << " [label=\"" << curNode << "\\n[" << tree.firstElem
 		   << "," << tree.lastElem << "," << tree.lastSep << "]\\n["
            << tree.firstNode << "," << tree.lastNode << "]\", style=rounded";
-    #ifdef MULTITHREADED_COMM
-        if (hasIntfNode && curLevel <= commLevel) {
-            dcFile << ", color=red];\n";
-            return;
-        }
-    #endif
     dcFile << "];\n";
 }
 
@@ -324,7 +309,7 @@ void close_dc_file (ofstream &dcFile)
 // Initialize the D&C tree dot file with default layout
 void init_dc_file (ofstream &dcFile)
 {
-	if (!dcFile) cerr << "Error opening dcFile!\n";
+	if (!dcFile) cerr << "Error opening dcFile.\n";
 
 	dcFile << "digraph RecursiveTree {\n\t-1 [label=\"Max elements per partition : "
            << MAX_ELEM_PER_PART << "\", shape=plaintext];\n"
