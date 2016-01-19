@@ -24,43 +24,40 @@ extern int *elemPerm, *nodePerm;
 void recursive_reading (tree_t &tree, ifstream &treeFile, int nbIntf)
 {
     bool isLeaf;
+    tree.ownedNodes   = nullptr;
     tree.intfIndex    = nullptr;
     tree.intfNodes    = nullptr;
     tree.intfDst      = nullptr;
-    tree.commID       = nullptr;
-    tree.ownedNodes   = nullptr;
     tree.left         = nullptr;
     tree.right        = nullptr;
     tree.sep          = nullptr;
     tree.nbOwnedNodes = 0;
 
-    treeFile.read ((char*)&tree.firstElem,   sizeof (int));
-    treeFile.read ((char*)&tree.lastElem,    sizeof (int));
-    treeFile.read ((char*)&tree.lastSep,     sizeof (int));
-    treeFile.read ((char*)&tree.firstNode,   sizeof (int));
-    treeFile.read ((char*)&tree.lastNode,    sizeof (int));
-    treeFile.read ((char*)&tree.firstEdge,   sizeof (int));
-    treeFile.read ((char*)&tree.lastEdge,    sizeof (int));
-    treeFile.read ((char*)&tree.vecOffset,   sizeof (int));
-    treeFile.read ((char*)&tree.isSep,       sizeof (bool));
-    treeFile.read ((char*)&tree.nbIntfNodes, sizeof (int));
-    if (tree.nbIntfNodes > 0) {
-        tree.intfIndex  = new int [nbIntf+1];
-        tree.intfNodes  = new int [tree.nbIntfNodes];
-        tree.intfDst    = new int [tree.nbIntfNodes];
-        tree.commID     = new int [nbIntf];
-        treeFile.read ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
-        treeFile.read ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
-        treeFile.read ((char*)tree.intfDst,   tree.nbIntfNodes * sizeof (int));
-        treeFile.read ((char*)tree.commID,              nbIntf * sizeof (int));
-    }
+    treeFile.read ((char*)&tree.firstElem, sizeof (int));
+    treeFile.read ((char*)&tree.lastElem,  sizeof (int));
+    treeFile.read ((char*)&tree.lastSep,   sizeof (int));
+    treeFile.read ((char*)&tree.firstNode, sizeof (int));
+    treeFile.read ((char*)&tree.lastNode,  sizeof (int));
+    treeFile.read ((char*)&tree.firstEdge, sizeof (int));
+    treeFile.read ((char*)&tree.lastEdge,  sizeof (int));
+    treeFile.read ((char*)&tree.vecOffset, sizeof (int));
+    treeFile.read ((char*)&tree.isSep,     sizeof (bool));
+    treeFile.read ((char*)&isLeaf,         sizeof (bool));
 
-    treeFile.read ((char*)&isLeaf, sizeof (bool));
     if (isLeaf) {
         treeFile.read ((char*)&tree.nbOwnedNodes, sizeof (int));
+        treeFile.read ((char*)&tree.nbIntfNodes,  sizeof (int));
         if (tree.nbOwnedNodes > 0) {
             tree.ownedNodes = new int [tree.nbOwnedNodes];
             treeFile.read ((char*)tree.ownedNodes, tree.nbOwnedNodes * sizeof (int));
+        }
+        if (tree.nbIntfNodes > 0) {
+            tree.intfIndex = new int [nbIntf+1];
+            tree.intfNodes = new int [tree.nbIntfNodes];
+            tree.intfDst   = new int [tree.nbIntfNodes];
+            treeFile.read ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
+            treeFile.read ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+            treeFile.read ((char*)tree.intfDst,   tree.nbIntfNodes * sizeof (int));
         }
     }
     else {
@@ -114,20 +111,19 @@ void recursive_storing (tree_t &tree, ofstream &treeFile, int nbIntf)
     treeFile.write ((char*)&tree.lastEdge,    sizeof (int));
     treeFile.write ((char*)&tree.vecOffset,   sizeof (int));
     treeFile.write ((char*)&tree.isSep,       sizeof (bool));
-    treeFile.write ((char*)&tree.nbIntfNodes, sizeof (int));
-    if (tree.nbIntfNodes > 0) {
-        treeFile.write ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
-        treeFile.write ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
-        treeFile.write ((char*)tree.intfDst,   tree.nbIntfNodes * sizeof (int));
-        treeFile.write ((char*)tree.commID,              nbIntf * sizeof (int));
-    }
 
     if (tree.left == nullptr && tree.right == nullptr) {
         isLeaf = true;
         treeFile.write ((char*)&isLeaf,            sizeof (bool));
         treeFile.write ((char*)&tree.nbOwnedNodes, sizeof (int));
+        treeFile.write ((char*)&tree.nbIntfNodes,  sizeof (int));
         if (tree.nbOwnedNodes > 0) {
             treeFile.write ((char*)tree.ownedNodes, tree.nbOwnedNodes * sizeof (int));
+        }
+        if (tree.nbIntfNodes > 0) {
+            treeFile.write ((char*)tree.intfIndex,     (nbIntf + 1) * sizeof (int));
+            treeFile.write ((char*)tree.intfNodes, tree.nbIntfNodes * sizeof (int));
+            treeFile.write ((char*)tree.intfDst,   tree.nbIntfNodes * sizeof (int));
         }
     }
     else {

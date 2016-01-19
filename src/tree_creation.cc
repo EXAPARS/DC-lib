@@ -42,7 +42,7 @@ pthread_mutex_t mergeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // List containing the last updater of each node, and comm counter mutex
 int *nodeOwner = nullptr;
-pthread_mutex_t DCcommMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t *DCcommMutex = nullptr;
 
 // Initialize D&C tree interface for multithreaded communication
 void create_multithreaded_intf (tree_t &tree, int *intfIndex, int *intfNodes,
@@ -73,10 +73,9 @@ void create_multithreaded_intf (tree_t &tree, int *intfIndex, int *intfNodes,
         int ctr = 0;
 
         // Allocate the multithreaded interface
-        tree.intfIndex  = new int [nbIntf+1];
-        tree.intfNodes  = new int [tree.nbIntfNodes];
-        tree.intfDst    = new int [tree.nbIntfNodes];
-        tree.commID     = new int [nbIntf] ();
+        tree.intfIndex = new int [nbIntf+1];
+        tree.intfNodes = new int [tree.nbIntfNodes];
+        tree.intfDst   = new int [tree.nbIntfNodes];
 
         // Run through all interfaces
         for (int i = 0; i < nbIntf; i++) {
@@ -102,10 +101,9 @@ void create_multithreaded_intf (tree_t &tree, int *intfIndex, int *intfNodes,
             }
             // Increment the number of D&C nodes on the current interface
             if (ctr > tree.intfIndex[i]) {
-                tree.commID[i] = nbDCcomm[i];
-                pthread_mutex_lock (&DCcommMutex);
+                pthread_mutex_lock (&(DCcommMutex[i]));
                 nbDCcomm[i]++;
-                pthread_mutex_unlock (&DCcommMutex);
+                pthread_mutex_unlock (&(DCcommMutex[i]));
             }
         }
         tree.intfIndex[nbIntf] = ctr;
@@ -255,6 +253,13 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
         ofstream dcFile;
     #endif
 
+    #ifdef MULTITHREADED_COMM
+        DCcommMutex = new pthread_mutex_t [nbIntf];
+        for (int i = 0; i < nbIntf; i++) {
+            DCcommMutex[i] = PTHREAD_MUTEX_INITIALIZER;
+        }
+    #endif
+
     // Compute the edge interval, the list of nodes owned by each leaf of the D&C tree,
     // and the interface index for multithreaded communication
     #ifdef OMP
@@ -270,7 +275,7 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
     #endif
 
     #ifdef MULTITHREADED_COMM
-        delete[] nodeOwner;
+        delete[] DCcommMutex, delete[] nodeOwner;
     #endif
 }
 
@@ -278,25 +283,24 @@ void DC_finalize_tree (int *nodeToNodeRow, int *elemToNode, int *intfIndex,
 void init_dc_tree (tree_t &tree, int firstElem, int lastElem, int nbSepElem,
                    int firstNode, int lastNode, bool isSep, bool isLeaf)
 {
-    tree.intfIndex        = nullptr;
-    tree.intfNodes        = nullptr;
-    tree.intfDst          = nullptr;
-    tree.commID           = nullptr;
-    tree.ownedNodes       = nullptr;
-    tree.nbOwnedNodes     = 0;
-    tree.nbIntfNodes      = 0;
-    tree.firstElem        = firstElem;
-    tree.lastElem         = lastElem - nbSepElem;
-    tree.lastSep          = lastElem;
-    tree.firstNode        = firstNode;
-    tree.lastNode         = lastNode;
-    tree.firstEdge        = -1;
-    tree.lastEdge         = -1;
-    tree.vecOffset        = 0;
-    tree.isSep            = isSep;
-    tree.left             = nullptr;
-    tree.right            = nullptr;
-    tree.sep              = nullptr;
+    tree.ownedNodes   = nullptr;
+    tree.intfIndex    = nullptr;
+    tree.intfNodes    = nullptr;
+    tree.intfDst      = nullptr;
+    tree.nbOwnedNodes = 0;
+    tree.nbIntfNodes  = 0;
+    tree.firstElem    = firstElem;
+    tree.lastElem     = lastElem - nbSepElem;
+    tree.lastSep      = lastElem;
+    tree.firstNode    = firstNode;
+    tree.lastNode     = lastNode;
+    tree.firstEdge    = -1;
+    tree.lastEdge     = -1;
+    tree.vecOffset    = 0;
+    tree.isSep        = isSep;
+    tree.left         = nullptr;
+    tree.right        = nullptr;
+    tree.sep          = nullptr;
 
     if (isLeaf == false) {
         tree.left  = new tree_t;

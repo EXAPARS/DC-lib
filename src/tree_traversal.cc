@@ -65,10 +65,9 @@ void tree_traversal (void (*userSeqFct)  (void *, DCargs_t *),
         #ifdef MULTITHREADED_COMM
             if (tree.nbIntfNodes > 0) {
                 DCcommArgs_t DCcommArgs;
-                DCcommArgs.intfIndex  = tree.intfIndex;
-                DCcommArgs.intfNodes  = tree.intfNodes;
-                DCcommArgs.intfDst    = tree.intfDst;
-                DCcommArgs.commID     = tree.commID;
+                DCcommArgs.intfIndex = tree.intfIndex;
+                DCcommArgs.intfNodes = tree.intfNodes;
+                DCcommArgs.intfDst   = tree.intfDst;
                 userCommFct (userCommArgs, &DCcommArgs);
             }
         #endif
