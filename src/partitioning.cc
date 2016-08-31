@@ -31,9 +31,6 @@
 
 extern tree_t *treeHead;
 extern int *elemPerm, *nodePerm, *nodeOwner;
-#ifdef MULTITHREADED_COMM
-    extern int commLevel;
-#endif
 
 pthread_mutex_t metisMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -185,9 +182,6 @@ void partitioning (int *elemToNode, int nbElem, int dimElem, int nbNodes)
     int *graphIndex = new int [nbNodes + 1];
     int *graphValue = new int [nbNodes * 15];
     int *nodePart   = new int [nbNodes];
-    #ifdef MULTITHREADED_COMM
-        commLevel = ceil ((double)log2 (nbPart) / 4.);
-    #endif
     mesh_to_nodal (graphIndex, graphValue, elemToNode, nbElem, dimElem, nbNodes);
     METIS_PartGraphRecursive (&nbNodes, &constraint, graphIndex, graphValue, nullptr,
                               nullptr, nullptr, &nbPart, nullptr, nullptr, nullptr,

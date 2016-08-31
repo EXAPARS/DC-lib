@@ -23,28 +23,28 @@ void DC_permute_double_2d_array (double *tab, int nbItem, int dimItem)
 {
 	char   *checkPerm = new char   [nbItem] ();
 	double *tmpSrc    = new double [dimItem];
-	double *tmpDest   = new double [dimItem];
+	double *tmpDst    = new double [dimItem];
 
 	for (int i = 0; i < nbItem; i++) {
 		if (checkPerm[i] == 1) continue;
 
-		int init = i, src = i, dest;
+		int init = i, src = i, dst;
 		for (int j = 0; j < dimItem; j++) {
 			tmpSrc[j] = tab[i*dimItem+j];
 		}
 		do {
-			dest = nodePerm[src];
+			dst = nodePerm[src];
 			for (int j = 0; j < dimItem; j++) {
-				tmpDest[j] = tab[dest*dimItem+j];
-				tab[dest*dimItem+j] = tmpSrc[j];
-				tmpSrc[j] = tmpDest[j];
+				tmpDst[j] = tab[dst*dimItem+j];
+				tab[dst*dimItem+j] = tmpSrc[j];
+				tmpSrc[j] = tmpDst[j];
 			}
-			src = dest;
+			src = dst;
 			checkPerm[src] = 1;
 		}
 		while (src != init);
 	}
-	delete[] tmpDest, delete[] tmpSrc, delete[] checkPerm;
+	delete[] tmpDst, delete[] tmpSrc, delete[] checkPerm;
 }
 
 // Permute "tab" 2D array of int using "perm"
@@ -52,7 +52,7 @@ void DC_permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem, int 
 {
     char *checkPerm = new char [nbItem] ();
     int  *tmpSrc    = new int  [dimItem];
-    int  *tmpDest   = new int  [dimItem];
+    int  *tmpDst    = new int  [dimItem];
 
     // If no permutation is given, default behavior is to use D&C elemPerm
     if (perm == nullptr) perm = elemPerm;
@@ -60,23 +60,23 @@ void DC_permute_int_2d_array (int *tab, int *perm, int nbItem, int dimItem, int 
     for (int i = 0; i < nbItem; i++) {
         if (checkPerm[i] == 1) continue;
 
-        int init = i, src = i, dest;
+        int init = i, src = i, dst;
         for (int j = 0; j < dimItem; j++) {
             tmpSrc[j] = tab[(i+offset)*dimItem+j];
         }
         do {
-            dest = perm[src];
+            dst = perm[src];
             for (int j = 0; j < dimItem; j++) {
-                tmpDest[j] = tab[(dest+offset)*dimItem+j];
-                tab[(dest+offset)*dimItem+j] = tmpSrc[j];
-                tmpSrc[j] = tmpDest[j];
+                tmpDst[j] = tab[(dst+offset)*dimItem+j];
+                tab[(dst+offset)*dimItem+j] = tmpSrc[j];
+                tmpSrc[j] = tmpDst[j];
             }
-            src = dest;
+            src = dst;
             checkPerm[src] = 1;
         }
         while (src != init);
     }
-    delete[] tmpDest, delete[] tmpSrc, delete[] checkPerm;
+    delete[] tmpDst, delete[] tmpSrc, delete[] checkPerm;
 }
 
 // Permute "tab" 1D array of int using node permutation
@@ -86,16 +86,16 @@ void DC_permute_int_1d_array (int *tab, int size)
 	for (int i = 0; i < size; i++) {
 		if (checkPerm[i] == 1) continue;
 
-		int init = i, src = i, dest;
-		int tmpSrc = tab[i], tmpDest;
+		int init = i, src = i, dst;
+		int tmpSrc = tab[i], tmpDst;
 		checkPerm[i] = 1;
 
 		do {
-			dest      = nodePerm[src];
-			tmpDest   = tab[dest];
-			tab[dest] = tmpSrc;
-			tmpSrc    = tmpDest;
-			src       = dest;
+			dst      = nodePerm[src];
+			tmpDst   = tab[dst];
+			tab[dst] = tmpSrc;
+			tmpSrc   = tmpDst;
+			src      = dst;
 			checkPerm[src] = 1;
 		}
 		while (src != init);
@@ -120,9 +120,9 @@ void merge_permutations (int *localElemPerm, int globalNbElem, int localNbElem,
 {
     int ctr = 0;
     for (int i = 0; i < globalNbElem; i++) {
-        int dest = elemPerm[i];
-        if (dest >= firstElem && dest <= lastElem) {
-            elemPerm[i] = localElemPerm[dest-firstElem] + firstElem;
+        int dst = elemPerm[i];
+        if (dst >= firstElem && dst <= lastElem) {
+            elemPerm[i] = localElemPerm[dst-firstElem] + firstElem;
             ctr++;
         }
         if (ctr == localNbElem)	break;

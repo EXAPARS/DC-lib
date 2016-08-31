@@ -140,7 +140,7 @@ int create_bounded_color_part (int *colorPart, int *colorCard, list_t *elemToEle
             if (color % BLOCK_SIZE == 0) block++;
         }
         if (color >= MAX_COLOR) {
-            cerr << "Error: Not enough colors!\n";
+            cerr << "Error: Not enough colors.\n";
             exit (EXIT_FAILURE);
         }
         // Assign the first free color to current element
