@@ -25,7 +25,7 @@ A single command is required to compile a new binary:
   Default uses the pure D&C version.
 
 - The $VECTOR_LENGTH variable must be specified when using the vec version.
-  It can be either SSE, AVX or MIC depending on the target architecture.
+  It can be either SSE, AVX, KNC, or KNL depending on the target architecture.
 
 - The tree option is used to create a new D&C tree and new permutation functions.
   If not specified, the application will try to read the existing tree and permutations.
@@ -34,7 +34,7 @@ A single command is required to compile a new binary:
   and to the number of MPI processes. The files name can be read this way:
     $VERSION_$PARTITION_SIZE_$NB_PROCESS_$PROCESS_RANK
 
-If you want to build binaries for Xeon Phi, you need to use the MIC option whatever
+If you want to build binaries or Xeon Phi, you need to use the KNC or KNL option whatever
 the code version.
 
 You can vary the size of the D&C partitions by modifying the "DC.h" header file. It is
