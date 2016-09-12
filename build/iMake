@@ -63,8 +63,10 @@ for i in $@; do
         ARCHI="SSE"
     elif [[ $i == "avx" ]]; then
         ARCHI="AVX"
-    elif [[ $i == "mic" ]]; then
-        ARCHI="MIC"
+    elif [[ $i == "knc" ]]; then
+        ARCHI="KNC"
+    elif [[ $i == "knl" ]]; then
+        ARCHI="KNL"
     elif [[ $i == "tree" ]]; then
         TREE=1
     elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
@@ -89,7 +91,7 @@ done
 
 # Check arguments
 if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
+    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, KNC, KNL)\\033[0;39m"
     exit
 fi
 if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
@@ -107,8 +109,8 @@ if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
     exit
 fi
 
-# Cross compile for MIC
-if [[ $ARCHI == "mic" ]]; then
+# Cross compile for KNC
+if [[ $ARCHI == "knc" ]]; then
 	export CXX=icpc
 	export CFLAGS="-mmic"
 	export CXXFLAGS=$CFLAGS
